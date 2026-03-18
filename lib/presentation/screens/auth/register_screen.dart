@@ -54,7 +54,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             emailController.text.trim(),
                             passwordController.text,
                           );
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       context.go('/home');
                     },
               child: loading

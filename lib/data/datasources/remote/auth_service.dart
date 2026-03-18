@@ -1,8 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
+
+import '../../../core/env.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(Supabase.instance.client);
+  return AuthService(
+    SupabaseClient(
+      Env.supabaseUrl,
+      Env.supabaseAnonKey,
+    ),
+  );
 });
 
 class AuthService {
