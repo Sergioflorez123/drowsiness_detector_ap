@@ -1,8 +1,10 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
   Future<Position> getCurrent() async {
-    await Geolocator.requestPermission();
+    final status = await Permission.locationWhenInUse.request();
+    if (!status.isGranted) throw Exception("Location denied");
     return await Geolocator.getCurrentPosition();
   }
 

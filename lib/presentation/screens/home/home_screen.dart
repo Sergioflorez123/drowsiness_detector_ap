@@ -3,11 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class HomeScreen extends ConsumerWidget {
+import '../../../data/datasources/remote/event_service.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    // Silent offline sync verification
+    EventService().syncOfflineEvents();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
 

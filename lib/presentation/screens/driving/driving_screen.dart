@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vibration/vibration.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../domain/entities/drowsiness_state.dart';
 import '../../providers/camera_provider.dart';
@@ -23,6 +24,7 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
   }
 
   Future<void> _init() async {
+    WakelockPlus.enable();
     final cameraService = ref.read(cameraProvider);
     await cameraService.initialize();
     
@@ -42,6 +44,7 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
 
   @override
   void dispose() {
+    WakelockPlus.disable();
     ref.read(drowsinessProvider.notifier).disposeVision();
     super.dispose();
   }

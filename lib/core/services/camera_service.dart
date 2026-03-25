@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class CameraService {
   CameraController? controller;
@@ -8,6 +9,9 @@ class CameraService {
   bool get isInitialized => controller?.value.isInitialized ?? false;
 
   Future<void> initialize() async {
+    final status = await Permission.camera.request();
+    if (!status.isGranted) return;
+
     final cameras = await availableCameras();
     final front = cameras.firstWhere(
       (c) => c.lensDirection == CameraLensDirection.front,
