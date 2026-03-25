@@ -20,10 +20,10 @@ class AuthController extends StateNotifier<bool> {
     }
   }
 
-  Future<void> register(String email, String password) async {
+  Future<void> register(String email, String password, String name) async {
     state = true;
     try {
-      await ref.read(authServiceProvider).signUp(email, password);
+      await ref.read(authServiceProvider).signUp(email, password, name);
     } finally {
       state = false;
     }

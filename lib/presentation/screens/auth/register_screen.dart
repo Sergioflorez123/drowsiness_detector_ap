@@ -12,11 +12,13 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   @override
   void dispose() {
+    nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -32,17 +34,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Register', style: TextStyle(fontSize: 28)),
+            const Text('Registrarse', style: TextStyle(fontSize: 28)),
             const SizedBox(height: 20),
             TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Nombre Completo'),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 10),
+            TextField(
               controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: const InputDecoration(labelText: 'Correo Electrónico'),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 10),
             TextField(
               controller: passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(labelText: 'Contraseña'),
               obscureText: true,
             ),
             const SizedBox(height: 20),
@@ -50,9 +58,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               onPressed: loading
                   ? null
                   : () async {
+                      if (nameController.text.trim().isEmpty) return;
                       await ref.read(authProvider.notifier).register(
                             emailController.text.trim(),
                             passwordController.text,
+                            nameController.text.trim(),
                           );
                       if (!context.mounted) return;
                       context.go('/home');
@@ -63,11 +73,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Sign Up'),
+                  : const Text('Crear Cuenta'),
             ),
             TextButton(
               onPressed: () => context.go('/login'),
-              child: const Text('Back to login'),
+              child: const Text('Volver al login'),
             ),
           ],
         ),
@@ -75,4 +85,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
-

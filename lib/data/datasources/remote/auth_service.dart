@@ -17,10 +17,11 @@ class AuthService {
     );
   }
 
-  Future<void> signUp(String email, String password) async {
+  Future<void> signUp(String email, String password, String name) async {
     await client.auth.signUp(
       email: email,
       password: password,
+      data: {'name': name},
     );
   }
 }

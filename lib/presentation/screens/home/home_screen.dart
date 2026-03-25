@@ -8,10 +8,18 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = Supabase.instance.client.auth.currentUser;
+    final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detección Segura'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Configuración',
+            onPressed: () => context.push('/settings'),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
@@ -29,9 +37,9 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Bienvenido',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            Text(
+              '¡Hola, $name!',
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(

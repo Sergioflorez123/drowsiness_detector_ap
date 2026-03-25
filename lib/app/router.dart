@@ -7,6 +7,7 @@ import '../presentation/screens/home/home_screen.dart';
 import '../presentation/screens/map/live_map_screen.dart';
 import '../presentation/screens/splash/splash_screen.dart';
 import '../presentation/screens/stats/stats_screen.dart';
+import '../presentation/screens/settings/settings_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -39,6 +40,9 @@ final appRouter = GoRouter(
       path: '/stats',
       builder: (context, state) => const StatsScreen(),
     ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
   ],
 );
-
