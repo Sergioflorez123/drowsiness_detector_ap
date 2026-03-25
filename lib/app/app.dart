@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'router.dart';
 import '../presentation/providers/theme_provider.dart';
@@ -17,24 +18,32 @@ class MyApp extends ConsumerWidget {
       themeMode: themeMode,
       theme: ThemeData(
         useMaterial3: true,
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF3F51B5),
+          seedColor: const Color(0xFF00C2FF),
           brightness: Brightness.light,
-          surface: const Color(0xFFF5F7FA),
+          surface: const Color(0xFFF8FAFC), // Slate 50
+        ).copyWith(
+          primary: const Color(0xFF0F172A),
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
           backgroundColor: Colors.transparent,
-          foregroundColor: Color(0xFF1A1A1A),
+          foregroundColor: Color(0xFF0F172A),
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+        scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF82B1FF),
+          seedColor: const Color(0xFF00E676),
           brightness: Brightness.dark,
-          surface: const Color(0xFF0F172A),
+          surface: const Color(0xFF1E293B), // Slate 800
+        ).copyWith(
+          primary: const Color(0xFF00C2FF),
+          secondary: const Color(0xFF00E676),
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,

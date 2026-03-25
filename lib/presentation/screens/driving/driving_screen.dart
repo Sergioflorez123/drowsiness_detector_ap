@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vibration/vibration.dart';
 
 import '../../../domain/entities/drowsiness_state.dart';
 import '../../providers/camera_provider.dart';
@@ -26,11 +27,17 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
     await cameraService.initialize();
     
     await cameraService.startStream((image) {
+      if (!mounted) return;
       ref.read(drowsinessProvider.notifier).process(image);
     });
 
     if (!mounted) return;
     setState(() => _ready = true);
+    
+    // Slight haptic feedback on start
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(duration: 50);
+    }
   }
 
   @override
@@ -44,79 +51,121 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
     final state = ref.watch(drowsinessProvider);
     final cameraService = ref.watch(cameraProvider);
 
+    final isCritical = state.level == DrowsinessLevel.critical;
+
     return Scaffold(
+      backgroundColor: Colors.black, // Always dark when driving
       body: Stack(
         children: [
+          // Camera Preview
           SizedBox.expand(
             child: _ready && cameraService.isInitialized
                 ? cameraService.buildPreview()
-                : const ColoredBox(color: Colors.black),
+                : const Center(child: CircularProgressIndicator(color: Colors.white)),
           ),
-          _OverlayUI(state),
+          
+          // Dark Overlay for less distraction
+          Container(color: Colors.black.withOpacity(0.5)),
+
+          // Flashing Red Border on Critical
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isCritical ? Colors.redAccent : Colors.transparent,
+                width: isCritical ? 12.0 : 0.0,
+              ),
+            ),
+          ),
+          
+          // Top Bar Elements
+          Positioned(
+            top: 50,
+            left: 20,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+
+          // HUD Overlay
+          _HUDOverlay(state),
         ],
       ),
     );
   }
 }
 
-class _OverlayUI extends StatelessWidget {
+class _HUDOverlay extends StatelessWidget {
   final DrowsinessState state;
 
-  const _OverlayUI(this.state);
+  const _HUDOverlay(this.state);
 
   Color get color {
     switch (state.level) {
       case DrowsinessLevel.normal:
-        return Colors.green;
+        return const Color(0xFF00E676); // Neon Green
       case DrowsinessLevel.tired:
-        return Colors.yellow;
+        return const Color(0xFFFFC107); // Amber
       case DrowsinessLevel.drowsy:
-        return Colors.orange;
+        return const Color(0xFFFF9800); // Orange
       case DrowsinessLevel.critical:
-        return Colors.red;
+        return const Color(0xFFFF3D00); // Deep Red
     }
   }
 
   String get text {
     switch (state.level) {
       case DrowsinessLevel.normal:
-        return 'Awake';
+        return 'DESPIERTO';
       case DrowsinessLevel.tired:
-        return 'Tired';
+        return 'CANSADO';
       case DrowsinessLevel.drowsy:
-        return 'Drowsy';
+        return 'ALERTA';
       case DrowsinessLevel.critical:
-        return 'Wake up!';
+        return '¡PELIGRO!';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 50,
+      bottom: 80,
       left: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: color.withAlpha(217),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              text,
-              style: const TextStyle(fontSize: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 52,
+              fontWeight: FontWeight.w900,
+              color: color,
+              letterSpacing: 2,
+              shadows: [
+                Shadow(color: color.withOpacity(0.8), blurRadius: 30)
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Eyes closed: ${state.eyeClosureDuration.toStringAsFixed(2)}s',
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(40),
+                border: Border.all(color: color.withOpacity(0.4), width: 2),
+              ),
+              child: Text(
+                'Ojos cerrados: ${state.eyeClosureDuration.toStringAsFixed(1)}s',
+                style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
-
