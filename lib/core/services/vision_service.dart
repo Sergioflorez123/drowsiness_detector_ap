@@ -1,20 +1,43 @@
-import 'dart:math';
-
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../../domain/entities/drowsiness_state.dart';
 
 class VisionService {
-  DateTime? lastEyeOpenTime;
+  final FaceDetector _detector = FaceDetector(
+    options: FaceDetectorOptions(
+      enableClassification: true,
+      enableTracking: true,
+    ),
+  );
 
-  DrowsinessState processFrame() {
-    final random = Random();
-    final eyeClosed = random.nextBool();
+  DateTime? _lastClosedTime;
+
+  Future<DrowsinessState> processImage(InputImage image) async {
+    final faces = await _detector.processImage(image);
+
+    if (faces.isEmpty) {
+      return const DrowsinessState(
+        level: DrowsinessLevel.normal,
+        eyeClosureDuration: 0,
+      );
+    }
+
+    final face = faces.first;
+
+    final leftEye = face.leftEyeOpenProbability ?? 1;
+    final rightEye = face.rightEyeOpenProbability ?? 1;
+
+    final isClosed = leftEye < 0.4 && rightEye < 0.4;
 
     double duration = 0;
 
-    if (eyeClosed) {
-      duration = random.nextDouble() * 3;
+    if (isClosed) {
+      _lastClosedTime ??= DateTime.now();
+      duration = DateTime.now()
+          .difference(_lastClosedTime!)
+          .inMilliseconds /
+          1000;
     } else {
-      lastEyeOpenTime = DateTime.now();
+      _lastClosedTime = null;
     }
 
     final level = _classify(duration);
@@ -31,5 +54,8 @@ class VisionService {
     if (duration < 2.5) return DrowsinessLevel.drowsy;
     return DrowsinessLevel.critical;
   }
-}
 
+  void dispose() {
+    _detector.close();
+  }
+}

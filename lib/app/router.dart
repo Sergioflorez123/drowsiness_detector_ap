@@ -4,7 +4,9 @@ import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/auth/register_screen.dart';
 import '../presentation/screens/driving/driving_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
+import '../presentation/screens/map/live_map_screen.dart';
 import '../presentation/screens/splash/splash_screen.dart';
+import '../presentation/screens/stats/stats_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -28,6 +30,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/driving',
       builder: (context, state) => const DrivingScreen(),
+    ),
+    GoRoute(
+      path: '/map',
+      builder: (context, state) => const LiveMapScreen(),
+    ),
+    GoRoute(
+      path: '/stats',
+      builder: (context, state) => const StatsScreen(),
     ),
   ],
 );

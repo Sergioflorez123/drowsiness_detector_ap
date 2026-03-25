@@ -24,14 +24,18 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
   Future<void> _init() async {
     final cameraService = ref.read(cameraProvider);
     await cameraService.initialize();
-    ref.read(drowsinessProvider.notifier).start();
+    
+    await cameraService.startStream((image) {
+      ref.read(drowsinessProvider.notifier).process(image);
+    });
+
     if (!mounted) return;
     setState(() => _ready = true);
   }
 
   @override
   void dispose() {
-    ref.read(drowsinessProvider.notifier).stop();
+    ref.read(drowsinessProvider.notifier).disposeVision();
     super.dispose();
   }
 
