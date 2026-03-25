@@ -44,8 +44,9 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
 
   @override
   void dispose() {
-    WakelockPlus.disable();
+    ref.read(cameraProvider).stopStream();
     ref.read(drowsinessProvider.notifier).disposeVision();
+    WakelockPlus.disable();
     super.dispose();
   }
 
@@ -61,9 +62,12 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
       body: Stack(
         children: [
           // Camera Preview
-          SizedBox.expand(
+          Positioned.fill(
             child: _ready && cameraService.isInitialized
-                ? cameraService.buildPreview()
+                ? FittedBox(
+                    fit: BoxFit.cover,
+                    child: cameraService.buildPreview(),
+                  )
                 : const Center(child: CircularProgressIndicator(color: Colors.white)),
           ),
           

@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -22,6 +24,7 @@ class CameraService {
       front,
       ResolutionPreset.medium,
       enableAudio: false,
+      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
     );
 
     await controller?.initialize();
@@ -29,20 +32,46 @@ class CameraService {
 
   Future<void> startStream(Function(InputImage) onFrame) async {
     await controller?.startImageStream((image) {
-      final inputImage = _convert(image);
-      onFrame(inputImage);
+      try {
+        final inputImage = _convert(image);
+        if (inputImage != null) onFrame(inputImage);
+      } catch (e) {
+        // Ignorar fotogramas defectuosos
+      }
     });
   }
 
-  InputImage _convert(CameraImage image) {
-    final bytes = image.planes.first.bytes;
+  Future<void> stopStream() async {
+    if (controller?.value.isStreamingImages == true) {
+      await controller?.stopImageStream();
+    }
+  }
+
+  InputImage? _convert(CameraImage image) {
+    if (controller == null) return null;
+
+    final sensorOrientation = controller!.description.sensorOrientation;
+    InputImageRotation rotation = InputImageRotation.rotation0deg;
+    switch (sensorOrientation) {
+      case 90: rotation = InputImageRotation.rotation90deg; break;
+      case 180: rotation = InputImageRotation.rotation180deg; break;
+      case 270: rotation = InputImageRotation.rotation270deg; break;
+    }
+
+    final format = Platform.isAndroid ? InputImageFormat.nv21 : InputImageFormat.bgra8888;
+
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
 
     return InputImage.fromBytes(
       bytes: bytes,
       metadata: InputImageMetadata(
-        size: const Size(480, 640),
-        rotation: InputImageRotation.rotation0deg,
-        format: InputImageFormat.nv21,
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format,
         bytesPerRow: image.planes.first.bytesPerRow,
       ),
     );
@@ -50,7 +79,15 @@ class CameraService {
 
   Widget buildPreview() {
     if (!isInitialized) return const ColoredBox(color: Colors.black);
-    return CameraPreview(controller!);
+    
+    // Devolvemos el tamaño exacto proporcionado por la cámara
+    // Para no crear estiramientos antes de que el FittedBox lo procese.
+    final size = controller!.value.previewSize!;
+    return SizedBox(
+      width: size.height,  
+      height: size.width,
+      child: CameraPreview(controller!),
+    );
   }
 
   void dispose() {

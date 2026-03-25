@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:vibration/vibration.dart';
-import 'package:audio_session/audio_session.dart';
+import 'package:audio_session/audio_session.dart' as session;
 
 final alertProvider =
     StateNotifierProvider<AlertController, bool>((ref) {
@@ -10,27 +10,27 @@ final alertProvider =
 
 class AlertController extends StateNotifier<bool> {
   final _player = AudioPlayer();
-  AudioSession? _session;
+  session.AudioSession? _session;
 
   AlertController() : super(false) {
     _initSession();
   }
 
   Future<void> _initSession() async {
-    _session = await AudioSession.instance;
-    await _session!.configure(const AudioSessionConfiguration(
-      avAudioSessionCategory: AVAudioSessionCategory.playback,
-      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.duckOthers,
-      avAudioSessionMode: AVAudioSessionMode.spokenAudio,
+    _session = await session.AudioSession.instance;
+    await _session!.configure(session.AudioSessionConfiguration(
+      avAudioSessionCategory: session.AVAudioSessionCategory.playback,
+      avAudioSessionCategoryOptions: session.AVAudioSessionCategoryOptions.duckOthers,
+      avAudioSessionMode: session.AVAudioSessionMode.spokenAudio,
       avAudioSessionRouteSharingPolicy:
-          AVAudioSessionRouteSharingPolicy.defaultPolicy,
-      avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
-      androidAudioAttributes: AndroidAudioAttributes(
-        contentType: AndroidAudioContentType.sonification,
-        flags: AndroidAudioFlags.audibilityEnforced,
-        usage: AndroidAudioUsage.alarm,
+          session.AVAudioSessionRouteSharingPolicy.defaultPolicy,
+      avAudioSessionSetActiveOptions: session.AVAudioSessionSetActiveOptions.none,
+      androidAudioAttributes: const session.AndroidAudioAttributes(
+        contentType: session.AndroidAudioContentType.sonification,
+        flags: session.AndroidAudioFlags.audibilityEnforced,
+        usage: session.AndroidAudioUsage.alarm,
       ),
-      androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
+      androidAudioFocusGainType: session.AndroidAudioFocusGainType.gainTransientMayDuck,
       androidWillPauseWhenDucked: true,
     ));
   }

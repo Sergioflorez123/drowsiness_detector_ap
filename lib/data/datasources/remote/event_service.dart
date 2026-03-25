@@ -59,4 +59,20 @@ class EventService {
       await prefs.setStringList(_queueKey, failed);
     }
   }
+
+  Future<List<Map<String, dynamic>>> getEventsForLastDays(int days) async {
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final date = DateTime.now().subtract(Duration(days: days));
+    
+    final response = await client
+        .from('events')
+        .select()
+        .eq('user_id', userId)
+        .gte('created_at', date.toIso8601String())
+        .order('created_at', ascending: true);
+        
+    return List<Map<String, dynamic>>.from(response);
+  }
 }
