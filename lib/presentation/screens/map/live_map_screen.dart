@@ -18,13 +18,33 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   @override
   void initState() {
     super.initState();
-    _sub = location.stream().listen((pos) {
+    _initMap();
+  }
+
+  Future<void> _initMap() async {
+    try {
+      // 1. Fuerza la petición de permisos de GPS si no los tenía
+      final pos = await location.getCurrent();
+      if (!mounted) return;
+      setState(() {
+        current = LatLng(pos.latitude, pos.longitude);
+      });
+      
+      // 2. Comienza a seguir en vivo sólo si hay permisos correctos
+      _sub = location.stream().listen((newPos) {
+        if (mounted) {
+          setState(() {
+            current = LatLng(newPos.latitude, newPos.longitude);
+          });
+        }
+      });
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          current = LatLng(pos.latitude, pos.longitude);
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Debes otorgar el permiso de Ubicación/GPS para ver el mapa.')),
+        );
       }
-    });
+    }
   }
 
   @override

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'router.dart';
-import 'presentation/providers/theme_provider.dart';
+import '../presentation/providers/theme_provider.dart';
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
