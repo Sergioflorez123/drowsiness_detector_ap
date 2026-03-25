@@ -12,6 +12,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -22,6 +23,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    try {
+      await ref.read(authProvider.notifier).login(
+            emailController.text.trim(),
+            passwordController.text,
+          );
+      if (!mounted) return;
+      context.go('/home');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: Correo o contraseña incorrectos.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loading = ref.watch(authProvider);
@@ -29,50 +51,54 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Login', style: TextStyle(fontSize: 28)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: loading
-                  ? null
-                  : () async {
-                      await ref.read(authProvider.notifier).login(
-                            emailController.text.trim(),
-                            passwordController.text,
-                          );
-                      if (!context.mounted) return;
-                      context.go('/home');
-                    },
-              child: loading
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Sign In'),
-            ),
-            TextButton(
-              onPressed: () => context.go('/register'),
-              child: const Text('Create account'),
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Iniciar Sesión', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Correo Electrónico', border: OutlineInputBorder()),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) return 'El correo no puede estar vacío';
+                  if (!value.contains('@')) return 'Debes ingresar un correo válido';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: passwordController,
+                decoration: const InputDecoration(labelText: 'Contraseña', border: OutlineInputBorder()),
+                obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'La contraseña no puede estar vacía';
+                  if (value.length < 6) return 'Debe tener al menos 6 caracteres';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: loading ? null : _submit,
+                  child: loading
+                      ? const CircularProgressIndicator(strokeWidth: 2)
+                      : const Text('Entrar', style: TextStyle(fontSize: 18)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => context.go('/register'),
+                child: const Text('¿No tienes cuenta? Regístrate aquí'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

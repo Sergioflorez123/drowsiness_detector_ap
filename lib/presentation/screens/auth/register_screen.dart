@@ -12,6 +12,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -24,6 +25,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    try {
+      await ref.read(authProvider.notifier).register(
+            emailController.text.trim(),
+            passwordController.text,
+            nameController.text.trim(),
+          );
+      if (!mounted) return;
+      context.go('/home');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al crear cuenta. Revisa tus datos o si el correo ya existe.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loading = ref.watch(authProvider);
@@ -31,55 +54,62 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Registrarse', style: TextStyle(fontSize: 28)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nombre Completo'),
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Correo Electrónico'),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(labelText: 'Contraseña'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: loading
-                  ? null
-                  : () async {
-                      if (nameController.text.trim().isEmpty) return;
-                      await ref.read(authProvider.notifier).register(
-                            emailController.text.trim(),
-                            passwordController.text,
-                            nameController.text.trim(),
-                          );
-                      if (!context.mounted) return;
-                      context.go('/home');
-                    },
-              child: loading
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Crear Cuenta'),
-            ),
-            TextButton(
-              onPressed: () => context.go('/login'),
-              child: const Text('Volver al login'),
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Crear Cuenta', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Nombre Completo', border: OutlineInputBorder()),
+                textCapitalization: TextCapitalization.words,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) return 'El nombre es obligatorio';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Correo Electrónico', border: OutlineInputBorder()),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) return 'El correo es obligatorio';
+                  if (!value.contains('@')) return 'Correo no válido';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: passwordController,
+                decoration: const InputDecoration(labelText: 'Contraseña', border: OutlineInputBorder()),
+                obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'La contraseña es obligatoria';
+                  if (value.length < 6) return 'Mínimo 6 caracteres requeridos';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: loading ? null : _submit,
+                  child: loading
+                      ? const CircularProgressIndicator(strokeWidth: 2)
+                      : const Text('Registrarse', style: TextStyle(fontSize: 18)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => context.go('/login'),
+                child: const Text('¿Ya tienes cuenta? Inicia sesión'),
+              ),
+            ],
+          ),
         ),
       ),
     );

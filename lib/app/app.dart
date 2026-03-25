@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'router.dart';
-import '../presentation/providers/theme_provider.dart';
+import 'presentation/providers/theme_provider.dart';
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -19,12 +19,13 @@ class MyApp extends ConsumerWidget {
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
+        scaffoldBackgroundColor: const Color(0xFFF1F5F9), // Slate 100 for high light contrast
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00C2FF),
+          seedColor: const Color(0xFF2563EB), // Strong blue
           brightness: Brightness.light,
-          surface: const Color(0xFFF8FAFC), // Slate 50
+          surface: Colors.white, // White cards
         ).copyWith(
-          primary: const Color(0xFF0F172A),
+          primary: const Color(0xFF1E293B), // Slate 800 for dark crisp icons
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,

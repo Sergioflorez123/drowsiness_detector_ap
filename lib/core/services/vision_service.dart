@@ -1,4 +1,5 @@
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/drowsiness_state.dart';
 
 class VisionService {
@@ -10,8 +11,18 @@ class VisionService {
   );
 
   DateTime? _lastClosedTime;
+  double _threshold = 0.4;
+  bool _thresholdLoaded = false;
+
+  Future<void> _loadThreshold() async {
+    final prefs = await SharedPreferences.getInstance();
+    _threshold = prefs.getDouble('ai_sensitivity') ?? 0.4;
+    _thresholdLoaded = true;
+  }
 
   Future<DrowsinessState> processImage(InputImage image) async {
+    if (!_thresholdLoaded) await _loadThreshold();
+
     final faces = await _detector.processImage(image);
 
     if (faces.isEmpty) {
@@ -26,7 +37,7 @@ class VisionService {
     final leftEye = face.leftEyeOpenProbability ?? 1;
     final rightEye = face.rightEyeOpenProbability ?? 1;
 
-    final isClosed = leftEye < 0.4 && rightEye < 0.4;
+    final isClosed = leftEye < _threshold && rightEye < _threshold;
 
     double duration = 0;
 
