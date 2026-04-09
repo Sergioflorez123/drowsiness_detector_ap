@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../l10n/app_localizations.dart';
 
 import '../../../data/datasources/remote/event_service.dart';
+import '../../providers/stats_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -13,11 +15,9 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-
   @override
   void initState() {
     super.initState();
-    // Silent offline sync verification
     EventService().syncOfflineEvents();
   }
 
@@ -25,10 +25,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
+    final statsAsyncValue = ref.watch(statsProvider);
+    final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detección Segura'),
+        title: const Text('Dashboard'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -43,37 +46,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '¡Hola, $name!',
-              style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900),
+              loc.welcomeTitle(name),
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
-            const Text(
-              '¿Listo para un viaje seguro?',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+            Text(
+              loc.dashboardSummary,
+              style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
             ),
-            const SizedBox(height: 40),
-            _DashboardCard(
-              title: 'Iniciar Ruta',
-              subtitle: 'Análisis IA en tiempo real',
-              icon: Icons.drive_eta,
-              color: Theme.of(context).colorScheme.primary,
-              onTap: () => context.push('/driving'),
-            ),
-            const SizedBox(height: 20),
-            _DashboardCard(
-              title: 'Mapa en Vivo',
-              subtitle: 'Rastreo GPS de ti y emergencias',
-              icon: Icons.map,
-              color: const Color(0xFF00E676),
-              onTap: () => context.push('/map'),
-            ),
-            const SizedBox(height: 20),
-            _DashboardCard(
-              title: 'Estadísticas',
-              subtitle: 'Historial de alertas y puntaje',
-              icon: Icons.bar_chart,
-              color: const Color(0xFFFF9800),
-              onTap: () => context.push('/stats'),
+            const SizedBox(height: 32),
+            statsAsyncValue.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+              data: (stats) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ScoreCardWidget(stats: stats),
+                    const SizedBox(height: 24),
+                    _QuickStatTile(
+                      title: loc.weeklyEvents,
+                      value: stats.totalEvents.toString(),
+                      icon: Icons.history,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(height: 16),
+                    _QuickStatTile(
+                      title: loc.currentStatus,
+                      value: stats.safetyScore >= 80 ? 'Óptimo' : 'Irregular',
+                      icon: Icons.monitor_heart,
+                      color: stats.safetyScore >= 80 ? theme.colorScheme.secondary : theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 48),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      icon: const Icon(Icons.play_circle_fill, size: 28),
+                      label: Text(loc.startDriving, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                      onPressed: () => context.go('/driving'), // Usa el navigation shell
+                    )
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -82,82 +100,84 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _DashboardCard extends StatelessWidget {
+class _ScoreCardWidget extends StatelessWidget {
+  final DriverStats stats;
+  const _ScoreCardWidget({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          Text('Puntaje de Descanso y Seguridad', style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+          const SizedBox(height: 16),
+          Text(
+            '${stats.safetyScore}%',
+            style: TextStyle(
+              fontSize: 64,
+              fontWeight: FontWeight.w900,
+              color: stats.safetyScore > 80 ? theme.colorScheme.secondary : (stats.safetyScore > 50 ? Colors.orange : theme.colorScheme.error),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(stats.performanceMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickStatTile extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String value;
   final IconData icon;
   final Color color;
-  final VoidCallback onTap;
 
-  const _DashboardCard({
+  const _QuickStatTile({
     required this.title,
-    required this.subtitle,
+    required this.value,
     required this.icon,
     required this.color,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.4) : color.withOpacity(0.15),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          )
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 36, color: color),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.arrow_forward_ios, color: Colors.grey.withOpacity(0.5), size: 20),
-              ],
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(icon, color: color),
           ),
-        ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(title, style: const TextStyle(fontSize: 16)),
+          ),
+          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+        ],
       ),
     );
   }

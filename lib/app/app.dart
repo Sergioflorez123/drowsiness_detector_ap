@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 import 'router.dart';
 import '../presentation/providers/theme_provider.dart';
+
+class AppColors {
+  static const primary = Color(0xFF0A1F44); // Azul oscuro
+  static const secondary = Color(0xFF00BFFF); // Celeste brillante
+  static const success = Color(0xFF00C853); // Verde alerta
+  static const warning = Color(0xFFFFD600); // Amarillo advertencia
+  static const danger = Color(0xFFD50000); // Rojo peligro
+  static const background = Color(0xFFF2F4F8); // Gris claro
+}
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -13,38 +24,50 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp.router(
+      title: 'EyeAlert',
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es'),
+        Locale('en'),
+      ],
       themeMode: themeMode,
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
-        scaffoldBackgroundColor: const Color(0xFFF1F5F9), // Slate 100 for high light contrast
+        scaffoldBackgroundColor: AppColors.background,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563EB), // Strong blue
+          seedColor: AppColors.secondary,
           brightness: Brightness.light,
-          surface: Colors.white, // White cards
-        ).copyWith(
-          primary: const Color(0xFF1E293B), // Slate 800 for dark crisp icons
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          error: AppColors.danger,
+          surface: Colors.white,
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Color(0xFF0F172A),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
-        scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
+        scaffoldBackgroundColor: AppColors.primary,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00E676),
+          seedColor: AppColors.secondary,
           brightness: Brightness.dark,
-          surface: const Color(0xFF1E293B), // Slate 800
-        ).copyWith(
-          primary: const Color(0xFF00C2FF),
-          secondary: const Color(0xFF00E676),
+          primary: AppColors.secondary,
+          secondary: AppColors.success,
+          error: AppColors.danger,
+          surface: const Color(0xFF162A4F),
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,

@@ -37,7 +37,15 @@ class VisionService {
     final leftEye = face.leftEyeOpenProbability ?? 1;
     final rightEye = face.rightEyeOpenProbability ?? 1;
 
-    final isClosed = leftEye < _threshold && rightEye < _threshold;
+    // headEulerAngleX mide el cabeceo (Pitch). Cuando la cabeza cae hacia adelante, el ángulo se vuelve negativo.
+    // Un valor menor a -15 o -20 indica que la mandíbula bajó significativamente (pestañeo / cabeceo).
+    final headPitch = face.headEulerAngleX ?? 0;
+    
+    // Si la cabeza cae (-20 grados) o los ojos están cerrados se considera 'isClosed'
+    final isHeadDropped = headPitch < -20;
+    final isEyesClosed = leftEye < _threshold && rightEye < _threshold;
+
+    final isClosed = isEyesClosed || isHeadDropped;
 
     double duration = 0;
 
