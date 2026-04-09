@@ -24,7 +24,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
-    final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
+    final name = user?.userMetadata?['nama'] as String? ?? 'Usuario';
     final statsAsyncValue = ref.watch(statsProvider);
     final theme = Theme.of(context);
     final loc = AppLocalizations.of(context)!;
