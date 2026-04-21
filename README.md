@@ -1,17 +1,32 @@
-# drowsiness_detector_ap
+# Eye Alert — detector de somnolencia
 
-A new Flutter project.
+Aplicación Flutter (Android/iOS/…) que analiza la cámara frontal con **Google ML Kit**, muestra alertas (audio + vibración), registra **sesiones de conducción** y **uso diario** en **Supabase**, y ofrece mapa y estadísticas.
 
-## Getting Started
+## Requisitos en Supabase
 
-This project is a starting point for a Flutter application.
+Ejecuta el SQL de `supabase/migrations/001_eye_alert_schema.sql` en el editor SQL del proyecto para crear:
 
-A few resources to get you started if this is your first Flutter project:
+- `app_daily_usage` — aperturas por día por usuario  
+- `driving_sessions` — resumen por ruta (tiempos por nivel, máximo alcanzado, eventos críticos)  
+- `drowsiness_samples` — muestras periódicas durante la ruta  
+- `events` — alertas críticas con GPS (con `user_id`)
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Ajusta políticas RLS si ya tenías tablas con otro esquema.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Internacionalización
+
+Textos en `l10n/app_en.arb` y `l10n/app_es.arb`. Tras cambiar ARB:
+
+```bash
+flutter gen-l10n
+```
+
+La salida queda en `lib/l10n/` (ver `l10n.yaml`).
+
+## Sonido de alarma
+
+Incluido `assets/sounds/alarm.wav`. Si cambias el archivo, mantén la ruta en `pubspec.yaml`.
+
+## Configuración local
+
+Las claves de Supabase están en `lib/core/env.dart` para desarrollo; en producción conviene `--dart-define` o variables de entorno no versionadas.

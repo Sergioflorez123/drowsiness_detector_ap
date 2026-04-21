@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vibration/vibration.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../../data/datasources/remote/driving_remote_datasource.dart';
 import '../../../domain/entities/drowsiness_state.dart';
+import 'package:drowsiness_detector_ap/l10n/app_localizations.dart';
 import '../../providers/camera_provider.dart';
+import '../../providers/driving_session_id_provider.dart';
 import '../../providers/drowsiness_provider.dart';
 
 class DrivingScreen extends ConsumerStatefulWidget {
@@ -16,6 +22,7 @@ class DrivingScreen extends ConsumerStatefulWidget {
 
 class _DrivingScreenState extends ConsumerState<DrivingScreen> {
   bool _ready = false;
+  DateTime? _sessionStart;
 
   @override
   void initState() {
@@ -24,29 +31,59 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
   }
 
   Future<void> _init() async {
-    WakelockPlus.enable();
+    await WakelockPlus.enable();
     final cameraService = ref.read(cameraProvider);
     await cameraService.initialize();
-    
+
+    final ds = ref.read(drivingRemoteDataSourceProvider);
+    final sessionId = await ds.startDrivingSession();
+    ref.read(drivingSessionIdProvider.notifier).state = sessionId;
+    ref.read(drowsinessProvider.notifier).resetSessionTracking();
+    _sessionStart = DateTime.now();
+
     await cameraService.startStream((image) {
       if (!mounted) return;
-      ref.read(drowsinessProvider.notifier).process(image);
+      unawaited(ref.read(drowsinessProvider.notifier).process(image));
     });
 
     if (!mounted) return;
     setState(() => _ready = true);
-    
-    // Slight haptic feedback on start
-    if (await Vibration.hasVibrator() ?? false) {
+
+    final hasVibrator = await Vibration.hasVibrator();
+    if (hasVibrator == true) {
       Vibration.vibrate(duration: 50);
     }
   }
 
   @override
   void dispose() {
-    ref.read(cameraProvider).stopStream();
+    unawaited(ref.read(cameraProvider).stopStream());
+
+    final sessionId = ref.read(drivingSessionIdProvider);
+    ref.read(drivingSessionIdProvider.notifier).state = null;
+
+    if (sessionId != null && _sessionStart != null) {
+      final summary =
+          ref.read(drowsinessProvider.notifier).finishSessionSummary();
+      final duration =
+          DateTime.now().difference(_sessionStart!).inSeconds.clamp(0, 86400);
+      final ds = ref.read(drivingRemoteDataSourceProvider);
+      unawaited(
+        ds.endDrivingSession(
+          sessionId: sessionId,
+          durationSeconds: duration,
+          maxLevel: summary.maxLevel.name,
+          secNormal: summary.secondsPerLevel[DrowsinessLevel.normal] ?? 0,
+          secTired: summary.secondsPerLevel[DrowsinessLevel.tired] ?? 0,
+          secDrowsy: summary.secondsPerLevel[DrowsinessLevel.drowsy] ?? 0,
+          secCritical: summary.secondsPerLevel[DrowsinessLevel.critical] ?? 0,
+          criticalEvents: summary.criticalBursts,
+        ),
+      );
+    }
+
     ref.read(drowsinessProvider.notifier).disposeVision();
-    WakelockPlus.disable();
+    unawaited(WakelockPlus.disable());
     super.dispose();
   }
 
@@ -54,49 +91,43 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(drowsinessProvider);
     final cameraService = ref.watch(cameraProvider);
+    final l = AppLocalizations.of(context)!;
 
     final isCritical = state.level == DrowsinessLevel.critical;
 
     return Scaffold(
-      backgroundColor: Colors.black, // Always dark when driving
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Camera Preview
           Positioned.fill(
             child: _ready && cameraService.isInitialized
                 ? FittedBox(
                     fit: BoxFit.cover,
                     child: cameraService.buildPreview(),
                   )
-                : const Center(child: CircularProgressIndicator(color: Colors.white)),
+                : const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
           ),
-          
-          // Dark Overlay for less distraction
-          Container(color: Colors.black.withOpacity(0.5)),
-
-          // Flashing Red Border on Critical
+          Container(color: Colors.black.withOpacity(0.45)),
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
               border: Border.all(
                 color: isCritical ? Colors.redAccent : Colors.transparent,
-                width: isCritical ? 12.0 : 0.0,
+                width: isCritical ? 12 : 0,
               ),
             ),
           ),
-          
-          // Top Bar Elements
           Positioned(
-            top: 50,
-            left: 20,
+            top: 48,
+            left: 8,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close_rounded, color: Colors.white),
+              onPressed: () => context.pop(),
             ),
           ),
-
-          // HUD Overlay
-          _HUDOverlay(state),
+          _HUDOverlay(state: state, l: l),
         ],
       ),
     );
@@ -104,33 +135,34 @@ class _DrivingScreenState extends ConsumerState<DrivingScreen> {
 }
 
 class _HUDOverlay extends StatelessWidget {
-  final DrowsinessState state;
+  const _HUDOverlay({required this.state, required this.l});
 
-  const _HUDOverlay(this.state);
+  final DrowsinessState state;
+  final AppLocalizations l;
 
   Color get color {
     switch (state.level) {
       case DrowsinessLevel.normal:
-        return const Color(0xFF00E676); // Neon Green
+        return const Color(0xFF00E676);
       case DrowsinessLevel.tired:
-        return const Color(0xFFFFC107); // Amber
+        return const Color(0xFFFFC107);
       case DrowsinessLevel.drowsy:
-        return const Color(0xFFFF9800); // Orange
+        return const Color(0xFFFF9800);
       case DrowsinessLevel.critical:
-        return const Color(0xFFFF3D00); // Deep Red
+        return const Color(0xFFFF3D00);
     }
   }
 
   String get text {
     switch (state.level) {
       case DrowsinessLevel.normal:
-        return 'DESPIERTO';
+        return l.hudAwake;
       case DrowsinessLevel.tired:
-        return 'CANSADO';
+        return l.hudTired;
       case DrowsinessLevel.drowsy:
-        return 'ALERTA';
+        return l.hudAlert;
       case DrowsinessLevel.critical:
-        return '¡PELIGRO!';
+        return l.hudDanger;
     }
   }
 
@@ -147,27 +179,31 @@ class _HUDOverlay extends StatelessWidget {
             text,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 52,
+              fontSize: 48,
               fontWeight: FontWeight.w900,
               color: color,
-              letterSpacing: 2,
+              letterSpacing: 1.5,
               shadows: [
-                Shadow(color: color.withOpacity(0.8), blurRadius: 30)
+                Shadow(color: color.withOpacity(0.75), blurRadius: 28),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Center(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withOpacity(0.72),
                 borderRadius: BorderRadius.circular(40),
-                border: Border.all(color: color.withOpacity(0.4), width: 2),
+                border: Border.all(color: color.withOpacity(0.45), width: 2),
               ),
               child: Text(
-                'Ojos cerrados: ${state.eyeClosureDuration.toStringAsFixed(1)}s',
-                style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                l.hudEyesClosed(state.eyeClosureDuration.toStringAsFixed(1)),
+                style: const TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),

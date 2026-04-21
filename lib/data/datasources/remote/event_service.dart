@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -6,24 +7,29 @@ class EventService {
   final client = Supabase.instance.client;
   static const _queueKey = 'offline_events_queue';
 
+  String? get _userId => client.auth.currentUser?.id;
+
   Future<void> saveEvent({
     required String type,
     required double lat,
     required double lng,
     required String severity,
   }) async {
+    final uid = _userId;
+    if (uid == null) return;
+
     final eventData = {
+      'user_id': uid,
       'type': type,
       'latitude': lat,
       'longitude': lng,
       'severity': severity,
-      'created_at': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toUtc().toIso8601String(),
     };
 
     try {
       await client.from('events').insert(eventData);
     } catch (e) {
-      // Modo Offline: Si falla el internet, se encola localmente
       await _queueEvent(eventData);
     }
   }
@@ -35,18 +41,20 @@ class EventService {
     await prefs.setStringList(_queueKey, queue);
   }
 
-  /// Llamado silenciosamente cuando inicia el Dashboard y hay internet
   Future<void> syncOfflineEvents() async {
     final prefs = await SharedPreferences.getInstance();
     final queue = prefs.getStringList(_queueKey) ?? [];
-    
+
     if (queue.isEmpty) return;
 
-    List<String> failed = [];
+    final failed = <String>[];
 
     for (final item in queue) {
       try {
-        final data = jsonDecode(item);
+        final data = jsonDecode(item) as Map<String, dynamic>;
+        if (data['user_id'] == null && _userId != null) {
+          data['user_id'] = _userId;
+        }
         await client.from('events').insert(data);
       } catch (e) {
         failed.add(item);
@@ -64,15 +72,19 @@ class EventService {
     final userId = client.auth.currentUser?.id;
     if (userId == null) return [];
 
-    final date = DateTime.now().subtract(Duration(days: days));
-    
-    final response = await client
-        .from('events')
-        .select()
-        .eq('user_id', userId)
-        .gte('created_at', date.toIso8601String())
-        .order('created_at', ascending: true);
-        
-    return List<Map<String, dynamic>>.from(response);
+    final date = DateTime.now().toUtc().subtract(Duration(days: days));
+
+    try {
+      final response = await client
+          .from('events')
+          .select()
+          .eq('user_id', userId)
+          .gte('created_at', date.toIso8601String())
+          .order('created_at', ascending: true);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (_) {
+      return [];
+    }
   }
 }

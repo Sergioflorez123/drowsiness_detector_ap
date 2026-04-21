@@ -1,7 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../core/services/location_service.dart';
+
+import 'package:drowsiness_detector_ap/core/services/location_service.dart';
+import 'package:drowsiness_detector_ap/l10n/app_localizations.dart';
 
 class LiveMapScreen extends StatefulWidget {
   const LiveMapScreen({super.key});
@@ -11,69 +16,142 @@ class LiveMapScreen extends StatefulWidget {
 }
 
 class _LiveMapScreenState extends State<LiveMapScreen> {
-  final location = LocationService();
-  LatLng? current;
-  StreamSubscription? _sub;
+  final _location = LocationService();
+  GoogleMapController? _mapController;
+  StreamSubscription<Position>? _sub;
+
+  LatLng _target = const LatLng(4.65, -74.05);
+  bool _hasFix = false;
+  bool _permissionDenied = false;
 
   @override
   void initState() {
     super.initState();
-    _initMap();
+    _bootstrap();
   }
 
-  Future<void> _initMap() async {
+  Future<void> _bootstrap() async {
+    final l = AppLocalizations.of(context)!;
+
     try {
-      // 1. Fuerza la petición de permisos de GPS si no los tenía
-      final pos = await location.getCurrent();
+      final last = await _location.getLastKnown();
       if (!mounted) return;
-      setState(() {
-        current = LatLng(pos.latitude, pos.longitude);
-      });
-      
-      // 2. Comienza a seguir en vivo sólo si hay permisos correctos
-      _sub = location.stream().listen((newPos) {
-        if (mounted) {
-          setState(() {
-            current = LatLng(newPos.latitude, newPos.longitude);
-          });
-        }
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Debes otorgar el permiso de Ubicación/GPS para ver el mapa.')),
+      if (last != null) {
+        setState(() {
+          _target = LatLng(last.latitude, last.longitude);
+          _hasFix = true;
+        });
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(_target, 15.5),
         );
       }
+
+      final fresh = await _location.getCurrent();
+      if (!mounted) return;
+      setState(() {
+        _target = LatLng(fresh.latitude, fresh.longitude);
+        _hasFix = true;
+      });
+      await _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(_target, 16.2),
+      );
+
+      _sub = _location.stream().listen((pos) {
+        if (!mounted) return;
+        setState(() {
+          _target = LatLng(pos.latitude, pos.longitude);
+        });
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLng(_target),
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _permissionDenied = true;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.mapPermission)),
+      );
     }
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _mapController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (current == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final l = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Live Map')),
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: current!,
-          zoom: 16,
+      appBar: AppBar(
+        title: Text(l.mapTitle),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
         ),
-        markers: {
-          Marker(
-            markerId: const MarkerId('me'),
-            position: current!,
+      ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: _target,
+              zoom: _hasFix ? 15.5 : 4.5,
+            ),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            compassEnabled: true,
+            markers: {
+              Marker(
+                markerId: const MarkerId('me'),
+                position: _target,
+                infoWindow: InfoWindow(title: l.appTitle),
+              ),
+            },
+            onMapCreated: (c) => _mapController = c,
           ),
-        },
+          if (!_hasFix && !_permissionDenied)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(16),
+                color: scheme.surface.withOpacity(0.92),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          l.mapLocating,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

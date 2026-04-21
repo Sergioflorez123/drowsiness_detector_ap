@@ -1,0 +1,96 @@
+{
+  "@@locale": "en",
+  "appTitle": "Eye Alert",
+  "appTagline": "Drive awake. Arrive safe.",
+  "splashLoading": "Preparing your safe trip…",
+  "loginTitle": "Sign in",
+  "registerTitle": "Create account",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "fullNameLabel": "Full name",
+  "enterButton": "Enter",
+  "registerButton": "Register",
+  "noAccount": "No account? Register",
+  "haveAccount": "Already have an account? Sign in",
+  "errorLogin": "Incorrect email or password.",
+  "errorRegister": "Could not create account. Check your data or if the email is already in use.",
+  "homeTitle": "Safe driving",
+  "homeGreeting": "Hello, {name}!",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "homeSubtitle": "What do you want to do today?",
+  "cardDriveTitle": "Start route",
+  "cardDriveSubtitle": "AI checks your eyes in real time",
+  "cardMapTitle": "Live map",
+  "cardMapSubtitle": "Your position and emergency context",
+  "cardStatsTitle": "Statistics",
+  "cardStatsSubtitle": "History by day and safety score",
+  "settingsTitle": "Settings",
+  "settingsSecurityAi": "Safety & AI",
+  "settingsSensitivity": "Camera sensitivity",
+  "settingsAppearance": "Appearance",
+  "settingsDarkMode": "Dark mode",
+  "settingsDarkModeSubtitle": "Change how the app looks",
+  "settingsSystemTheme": "Use system theme",
+  "settingsSystemThemeSnack": "Using system theme",
+  "settingsLanguage": "Language",
+  "settingsLanguageSpanish": "Spanish",
+  "settingsLanguageEnglish": "English",
+  "settingsSignOut": "Sign out",
+  "settingsSignOutConfirm": "End session on this device?",
+  "cancel": "Cancel",
+  "statsTitle": "Driver insights",
+  "statsSafetyScore": "Safety score",
+  "statsWeeklyTitle": "Alerts this week ({count})",
+  "@statsWeeklyTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "statsFootnote": "{alerts} alerts · {sessions} sessions",
+  "@statsFootnote": {
+    "placeholders": {
+      "alerts": {"type": "int"},
+      "sessions": {"type": "int"}
+    }
+  },
+  "statsDailyOpens": "App opens by day",
+  "statsNoOpens": "No activity logged yet. Open the app on different days to see this chart.",
+  "statsPerfExcellent": "Impressive driving. Keep these habits.",
+  "statsPerfGood": "Solid performance. Watch fatigue on long trips.",
+  "statsPerfWatch": "Several risk signals. Plan breaks.",
+  "statsPerfHigh": "High risk. Rest before driving.",
+  "statsNoDataBody": "No data yet. Use “Start route” and open the app on different days to see trends.",
+  "statsError": "Could not load data",
+  "mapTitle": "Live map",
+  "mapLocating": "Finding your position…",
+  "mapPermission": "Location permission is required for the map.",
+  "mapOpenSettings": "Open settings",
+  "hudAwake": "AWAKE",
+  "hudTired": "TIRED",
+  "hudAlert": "WARNING",
+  "hudDanger": "DANGER!",
+  "hudEyesClosed": "Eyes closed: {seconds}s",
+  "@hudEyesClosed": {
+    "placeholders": {
+      "seconds": {"type": "String"}
+    }
+  },
+  "sensitivityLow": "Low (fewer alerts)",
+  "sensitivityNormal": "Normal",
+  "sensitivityHigh": "High (more sensitive)",
+  "sensitivityLabel": "Sensitivity: {label}",
+  "@sensitivityLabel": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "validatorEmailEmpty": "Email cannot be empty",
+  "validatorEmailInvalid": "Enter a valid email",
+  "validatorPasswordEmpty": "Password cannot be empty",
+  "validatorPasswordShort": "At least 6 characters",
+  "validatorNameEmpty": "Name is required"
+}
