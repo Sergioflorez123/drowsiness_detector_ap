@@ -1,0 +1,17 @@
+{
+  "@@locale": "es",
+  "appName": "EyeAlert",
+  "welcomeTitle": "¡Hola, {name}!",
+  "@welcomeTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Usuario"
+      }
+    }
+  },
+  "dashboardSummary": "Resumen de tu descanso y rendimiento:",
+  "startDriving": "IR A CONDUCIR",
+  "currentStatus": "Estado Actual",
+  "weeklyEvents": "Eventos Semanales"
+}

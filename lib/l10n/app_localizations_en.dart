@@ -9,6 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+<<<<<<< HEAD
   String get appTitle => 'Eye Alert';
 
   @override
@@ -56,10 +57,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String homeGreeting(String name) {
+=======
+  String get appName => 'EyeAlert';
+
+  @override
+  String welcomeTitle(String name) {
+>>>>>>> d201df58447c89a3bb3601f7fc38a8f3e56b85b0
     return 'Hello, $name!';
   }
 
   @override
+<<<<<<< HEAD
   String get homeSubtitle => 'What do you want to do today?';
 
   @override
@@ -221,4 +229,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get validatorNameEmpty => 'Name is required';
+=======
+  String get dashboardSummary => 'Summary of your rest and performance:';
+
+  @override
+  String get startDriving => 'START DRIVING';
+
+  @override
+  String get currentStatus => 'Current Status';
+
+  @override
+  String get weeklyEvents => 'Weekly Events';
+>>>>>>> d201df58447c89a3bb3601f7fc38a8f3e56b85b0
 }

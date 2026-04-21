@@ -1,0 +1,17 @@
+{
+  "@@locale": "en",
+  "appName": "EyeAlert",
+  "welcomeTitle": "Hello, {name}!",
+  "@welcomeTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "User"
+      }
+    }
+  },
+  "dashboardSummary": "Summary of your rest and performance:",
+  "startDriving": "START DRIVING",
+  "currentStatus": "Current Status",
+  "weeklyEvents": "Weekly Events"
+}
