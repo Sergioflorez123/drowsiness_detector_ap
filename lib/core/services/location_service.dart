@@ -23,7 +23,7 @@ class LocationService {
     return Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 13,
+        distanceFilter: 14,
       ),
     );
   }
