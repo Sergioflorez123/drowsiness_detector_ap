@@ -98,7 +98,6 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
-<<<<<<< HEAD
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
@@ -500,43 +499,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name is required'**
   String get validatorNameEmpty;
-=======
-  /// No description provided for @appName.
-  ///
-  /// In es, this message translates to:
-  /// **'EyeAlert'**
-  String get appName;
-
-  /// No description provided for @welcomeTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Hola, {name}!'**
-  String welcomeTitle(String name);
-
-  /// No description provided for @dashboardSummary.
-  ///
-  /// In es, this message translates to:
-  /// **'Resumen de tu descanso y rendimiento:'**
-  String get dashboardSummary;
-
-  /// No description provided for @startDriving.
-  ///
-  /// In es, this message translates to:
-  /// **'IR A CONDUCIR'**
-  String get startDriving;
-
-  /// No description provided for @currentStatus.
-  ///
-  /// In es, this message translates to:
-  /// **'Estado Actual'**
-  String get currentStatus;
-
-  /// No description provided for @weeklyEvents.
-  ///
-  /// In es, this message translates to:
-  /// **'Eventos Semanales'**
-  String get weeklyEvents;
->>>>>>> d201df58447c89a3bb3601f7fc38a8f3e56b85b0
 }
 
 class _AppLocalizationsDelegate
