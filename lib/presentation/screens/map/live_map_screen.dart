@@ -72,6 +72,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
   Future<void> _fetchAccurateFix() async {
     try {
+      final fast = await _location.getCurrentFast().timeout(
+        const Duration(seconds: 3),
+      );
+      if (!mounted) return;
+      final quick = LatLng(fast.latitude, fast.longitude);
+      setState(() {
+        _target = quick;
+        _hasFix = true;
+      });
+      _maybeMoveCamera(quick, zoom: 15.8, force: true);
+
       final fresh = await _location.getCurrent().timeout(const Duration(seconds: 6));
       if (!mounted) return;
       final next = LatLng(fresh.latitude, fresh.longitude);

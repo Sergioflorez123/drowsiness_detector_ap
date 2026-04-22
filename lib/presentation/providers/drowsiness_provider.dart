@@ -43,6 +43,8 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
   DrowsinessLevel _maxLevel = DrowsinessLevel.normal;
   int _criticalBursts = 0;
   DateTime? _lastSampleSent;
+  DateTime? _criticalStartedAt;
+  bool _contactAlertSent = false;
 
   void resetSessionTracking() {
     _lastAccumulateAt = DateTime.now();
@@ -52,6 +54,8 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
     _maxLevel = DrowsinessLevel.normal;
     _criticalBursts = 0;
     _lastSampleSent = null;
+    _criticalStartedAt = null;
+    _contactAlertSent = false;
   }
 
   DrowsinessSessionSummary finishSessionSummary() {
@@ -97,9 +101,26 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
 
     state = result;
 
+    final gotWorse = result.level.index > previousLevel.index;
+    if (gotWorse && result.level.index >= DrowsinessLevel.drowsy.index) {
+      ref.read(alertProvider.notifier).trigger(severity: result.level.name);
+      ref.read(emergencyProvider.notifier).trigger(result.level.name);
+    }
+
     if (result.level == DrowsinessLevel.critical) {
-      ref.read(alertProvider.notifier).trigger();
-      ref.read(emergencyProvider.notifier).trigger('critical');
+      _criticalStartedAt ??= now;
+      final criticalFor = now.difference(_criticalStartedAt!);
+      if (!_contactAlertSent && criticalFor >= const Duration(seconds: 15)) {
+        _contactAlertSent = true;
+        await ref.read(emergencyProvider.notifier).triggerContactAlert(
+              severity: 'critical',
+              reason:
+                  'Conductor sin recuperacion tras alerta critica prolongada',
+            );
+      }
+    } else {
+      _criticalStartedAt = null;
+      _contactAlertSent = false;
     }
 
     final sessionId = ref.read(drivingSessionIdProvider);

@@ -39,7 +39,7 @@ class AlertController extends StateNotifier<bool> {
     ));
   }
 
-  Future<void> trigger() async {
+  Future<void> trigger({String severity = 'critical'}) async {
     if (state) return;
 
     state = true;
@@ -56,10 +56,17 @@ class AlertController extends StateNotifier<bool> {
 
     final hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator == true) {
-      Vibration.vibrate(duration: 2000);
+      if (severity == 'critical') {
+        Vibration.vibrate(pattern: [0, 700, 300, 900], repeat: -1);
+      } else {
+        Vibration.vibrate(pattern: [0, 300, 220, 300], repeat: -1);
+      }
     }
 
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(
+      Duration(seconds: severity == 'critical' ? 5 : 3),
+    );
+    await Vibration.cancel();
 
     await _session?.setActive(false);
 

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:drowsiness_detector_ap/l10n/app_localizations.dart';
 import '../../providers/ai_sensitivity_provider.dart';
+import '../../providers/emergency_contact_provider.dart';
 import '../../providers/theme_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -19,8 +20,10 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
     final themeMode = ref.watch(themeProvider);
     final sensitivity = ref.watch(aiSensitivityProvider);
+    final emergencyContact = ref.watch(emergencyContactProvider);
     final user = Supabase.instance.client.auth.currentUser;
     final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
     final email = user?.email ?? '';
@@ -53,6 +56,54 @@ class SettingsScreen extends ConsumerWidget {
       await Supabase.instance.client.auth.signOut();
       if (!context.mounted) return;
       context.go('/login');
+    }
+
+    Future<void> editEmergencyContact() async {
+      var name = emergencyContact.name;
+      var phone = emergencyContact.phone;
+      final ok = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(isEs ? 'Contacto de emergencia' : 'Emergency contact'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    initialValue: name,
+                    decoration: InputDecoration(
+                      labelText: isEs ? 'Nombre' : 'Name',
+                    ),
+                    onChanged: (v) => name = v,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    initialValue: phone,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: isEs ? 'Telefono' : 'Phone',
+                    ),
+                    onChanged: (v) => phone = v,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(l.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(isEs ? 'Guardar' : 'Save'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!ok) return;
+      await ref.read(emergencyContactProvider.notifier).save(
+            name: name,
+            phone: phone,
+          );
     }
 
     return Scaffold(
@@ -104,6 +155,20 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: Text(
               l.sensitivityLabel(_sensitivityCaption(l, sensitivity)),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.contact_phone_rounded),
+            title: Text(
+              isEs ? 'Contacto de emergencia' : 'Emergency contact',
+            ),
+            subtitle: Text(
+              emergencyContact.isValid
+                  ? '${emergencyContact.name} - ${emergencyContact.phone}'
+                  : (isEs
+                      ? 'Configura nombre y telefono'
+                      : 'Set name and phone'),
+            ),
+            onTap: editEmergencyContact,
           ),
           Slider(
             value: sensitivity,

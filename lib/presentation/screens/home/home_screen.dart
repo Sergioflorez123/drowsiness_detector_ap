@@ -151,27 +151,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     letterSpacing: 1.1,
                                   ),
                             ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: riskColor.withOpacity(0.14),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: riskColor.withOpacity(0.6)),
-                              ),
-                              child: Text(
-                                isEs ? 'SINCRONIA' : 'NEURAL SYNC',
-                                style: TextStyle(
-                                  color: riskColor.withOpacity(0.95),
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 11,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -213,35 +192,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             fontWeight: FontWeight.w800,
                                             height: 1.2,
                                           ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      color: isDark
-                                          ? const Color(0xFF122B44)
-                                          : const Color(0xFFC8E7FB),
-                                      border: Border.all(
-                                        color: (isDark
-                                                ? const Color(0xFF1FD4FF)
-                                                : const Color(0xFF007EA8))
-                                            .withOpacity(0.4),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      isEs ? 'ACTIVO\nSCAN' : 'ACTIVE\nSCAN',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: isDark
-                                            ? const Color(0xFF76E9FF)
-                                            : const Color(0xFF006B8F),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                      ),
                                     ),
                                   ),
                                 ],
@@ -359,8 +309,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        _ActivityPanel(isEs: isEs, isDark: isDark),
                       ],
                     ),
                   ),
@@ -688,116 +636,6 @@ class _LevelMini extends StatelessWidget {
   }
 }
 
-class _ActivityPanel extends StatelessWidget {
-  const _ActivityPanel({required this.isEs, required this.isDark});
-
-  final bool isEs;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return _CyberContainer(
-      isDark: isDark,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  isEs ? 'ACTIVIDAD NEURAL' : 'NEURAL ACTIVITY',
-                  style: TextStyle(
-                    color:
-                        isDark ? const Color(0xFF8DD5E9) : const Color(0xFF006E95),
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
-                    fontSize: 11,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  isEs ? 'RASTREO OCULAR: ON' : 'OCULAR TRACKING: ON',
-                  style: TextStyle(
-                    color:
-                        isDark ? const Color(0xFF22DCFF) : const Color(0xFF0079A4),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              height: 64,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: isDark ? const Color(0xFF07142D) : const Color(0xFFCBE9FB),
-                border: Border.all(
-                  color: (isDark ? const Color(0xFF1FD4FF) : const Color(0xFF007EA8))
-                      .withOpacity(0.2),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  '~ ~ ~ ~ ~ ~ ~ ~',
-                  style: TextStyle(
-                    color: isDark ? const Color(0xFF29E4FF) : const Color(0xFF0078A3),
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                _MiniStat(label: 'EYE FRQ', value: '2.4Hz'),
-                _MiniStat(label: 'PUPIL DL', value: '4.2mm'),
-                _MiniStat(label: 'BLINK SPD', value: '120ms'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: isDark ? const Color(0xFF6E92AE) : const Color(0xFF4E7690),
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            color: isDark ? const Color(0xFF2DE8FF) : const Color(0xFF007AA6),
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _MetricChip extends StatelessWidget {
   const _MetricChip({
