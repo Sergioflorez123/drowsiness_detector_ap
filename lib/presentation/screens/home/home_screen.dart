@@ -112,16 +112,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       children: [
                         Row(
                           children: [
-                            Expanded(
-                              child: Text(
-                                'Dashboard de somnolencia',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF81EDFF),
-                                    ),
-                              ),
+                            const Icon(
+                              Icons.remove_red_eye_rounded,
+                              color: Color(0xFF81EDFF),
+                              size: 20,
                             ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'EYE ALERT',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF81EDFF),
+                                    letterSpacing: 1.1,
+                                  ),
+                            ),
+                            const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -135,19 +141,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               ),
                               child: Text(
-                                riskLabel,
+                                'NEURAL SYNC',
                                 style: TextStyle(
-                                  color: riskColor,
-                                  fontWeight: FontWeight.w800,
+                                  color: riskColor.withOpacity(0.95),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                  letterSpacing: 0.8,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(18),
                             gradient: const LinearGradient(
@@ -161,81 +169,149 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           child: Column(
                             children: [
-                              SizedBox(
-                                width: 160,
-                                height: 160,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 150,
-                                      height: 150,
-                                      child: CircularProgressIndicator(
-                                        value: stats.safetyScore / 100,
-                                        strokeWidth: 11,
-                                        backgroundColor: const Color(
-                                          0xFF1A2A47,
-                                        ),
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          riskColor,
-                                        ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'BIOMETRIC STATUS\nDRIVER\nALERTNESS',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            color: const Color(0xFF9DD5E3),
+                                            fontWeight: FontWeight.w800,
+                                            height: 1.2,
+                                          ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: const Color(0xFF122B44),
+                                      border: Border.all(
+                                        color: const Color(
+                                          0xFF1FD4FF,
+                                        ).withOpacity(0.4),
                                       ),
                                     ),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
+                                    child: const Text(
+                                      'ACTIVE\nSCAN',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Color(0xFF76E9FF),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  color: const Color(0xFF081731),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF1FD4FF,
+                                    ).withOpacity(0.22),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Container(
+                                    width: 170,
+                                    height: 170,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: const Color(0xFF0A1430),
+                                      border: Border.all(
+                                        color: const Color(
+                                          0xFF1FD4FF,
+                                        ).withOpacity(0.52),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFF1FD4FF,
+                                          ).withOpacity(0.15),
+                                          blurRadius: 24,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           '${stats.safetyScore}%',
                                           style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 30,
+                                            color: Color(0xFF1EE7FF),
+                                            fontSize: 42,
                                             fontWeight: FontWeight.w900,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
                                         Text(
                                           riskLabel.toUpperCase(),
                                           style: TextStyle(
                                             color: riskColor,
                                             fontSize: 12,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 1.2,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.4,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'DRIVER ALERTNESS',
-                                style: TextStyle(
-                                  color: Color(0xFF6ECFE7),
-                                  fontSize: 11,
-                                  letterSpacing: 1.3,
-                                  fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 14),
+                        _CyberContainer(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  'ALERTNESS LEVELS',
+                                  style: TextStyle(
+                                    color: Color(0xFF8DD5E9),
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.0,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                SizedBox(height: 10),
+                                _DrowsinessGrid(),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
                               child: _MetricChip(
-                                label: 'Eventos 7 días',
+                                label: 'RECENT EVENTS (7D)',
                                 value: '${stats.totalEvents}',
                                 icon: Icons.warning_amber_rounded,
-                                color: const Color(0xFF00C9FF),
+                                color: const Color(0xFFFFA26B),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: _MetricChip(
-                                label: 'Sesiones 7 días',
+                                label: 'TOTAL SESSIONS',
                                 value: '${stats.totalSessions}',
                                 icon: Icons.route_rounded,
                                 color: const Color(0xFF65F1FF),
@@ -243,38 +319,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Niveles de somnolencia',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF8BEDFF),
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        const _DrowsinessLevelRow(
-                          label: 'Normal',
-                          description: 'Conducción estable y alerta.',
-                          color: Color(0xFF00E5FF),
-                        ),
-                        const _DrowsinessLevelRow(
-                          label: 'Cansado',
-                          description: 'Primeras señales de fatiga.',
-                          color: Color(0xFF2EBDFF),
-                        ),
-                        const _DrowsinessLevelRow(
-                          label: 'Somnoliento',
-                          description: 'Riesgo alto, tomar una pausa.',
-                          color: Color(0xFFFFA726),
-                        ),
-                        const _DrowsinessLevelRow(
-                          label: 'Crítico',
-                          description: 'Peligro inmediato, detenerse.',
-                          color: Colors.red,
-                        ),
+                        const SizedBox(height: 12),
+                        const _ActivityPanel(),
                       ],
                     ),
                   ),
@@ -297,10 +343,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Expanded(
                       child: _BottomQuickButton(
-                        label: 'Inicio',
-                        icon: Icons.remove_red_eye_outlined,
+                        label: 'Mapa',
+                        icon: Icons.map_outlined,
+                        onTap: () => context.push('/map'),
+                      ),
+                    ),
+                    Expanded(
+                      child: _BottomQuickButton(
+                        label: 'Iniciar',
+                        icon: Icons.directions_car_filled_rounded,
                         active: true,
-                        onTap: () {},
+                        onTap: () => context.push('/driving'),
                       ),
                     ),
                     Expanded(
@@ -308,13 +361,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         label: 'Historial',
                         icon: Icons.history_rounded,
                         onTap: () => context.push('/stats'),
-                      ),
-                    ),
-                    Expanded(
-                      child: _BottomQuickButton(
-                        label: 'Mapa',
-                        icon: Icons.map_outlined,
-                        onTap: () => context.push('/map'),
                       ),
                     ),
                     Expanded(
@@ -329,13 +375,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            _SideActionButton(
-              title: l.cardDriveTitle,
-              icon: Icons.directions_car_filled_rounded,
-              accent: const Color(0xFF00D2FF),
-              onTap: () => context.push('/driving'),
-            ),
-            const SizedBox(height: 10),
             _CyberContainer(
               child: Padding(
                 padding: const EdgeInsets.all(18),
@@ -395,57 +434,6 @@ class _CyberContainer extends StatelessWidget {
   }
 }
 
-class _SideActionButton extends StatelessWidget {
-  const _SideActionButton({
-    required this.title,
-    required this.icon,
-    required this.accent,
-    required this.onTap,
-  });
-
-  final String title;
-  final IconData icon;
-  final Color accent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0B1A39), Color(0xFF0A1632)],
-          ),
-          border: Border.all(color: accent.withOpacity(0.65)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: accent),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, size: 18, color: accent),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _BottomQuickButton extends StatelessWidget {
   const _BottomQuickButton({
     required this.label,
@@ -483,6 +471,211 @@ class _BottomQuickButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DrowsinessGrid extends StatelessWidget {
+  const _DrowsinessGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _LevelMini(
+                title: 'NORMAL',
+                subtitle: 'optimal response',
+                color: Color(0xFF1EE7FF),
+              ),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: _LevelMini(
+                title: 'TIRED',
+                subtitle: 'increased blink duration',
+                color: Color(0xFF6C88A5),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _LevelMini(
+                title: 'DROWSY',
+                subtitle: 'micro-sleeps risk detected',
+                color: Color(0xFFFFA726),
+              ),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: _LevelMini(
+                title: 'CRITICAL',
+                subtitle: 'immediate intervention',
+                color: Color(0xFFFF5252),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LevelMini extends StatelessWidget {
+  const _LevelMini({
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
+
+  final String title;
+  final String subtitle;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFFE8F9FF),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11,
+                ),
+              ),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF6E92AE),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivityPanel extends StatelessWidget {
+  const _ActivityPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return _CyberContainer(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Text(
+                  'NEURAL ACTIVITY',
+                  style: TextStyle(
+                    color: Color(0xFF8DD5E9),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                    fontSize: 11,
+                  ),
+                ),
+                Spacer(),
+                Text(
+                  'OCULAR TRACKING: ON',
+                  style: TextStyle(
+                    color: Color(0xFF22DCFF),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 64,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFF07142D),
+                border: Border.all(
+                  color: const Color(0xFF1FD4FF).withOpacity(0.2),
+                ),
+              ),
+              child: const Center(
+                child: Text(
+                  '~ ~ ~ ~ ~ ~ ~ ~',
+                  style: TextStyle(
+                    color: Color(0xFF29E4FF),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _MiniStat(label: 'EYE FRQ', value: '2.4Hz'),
+                _MiniStat(label: 'PUPIL DL', value: '4.2mm'),
+                _MiniStat(label: 'BLINK SPD', value: '120ms'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF6E92AE),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF2DE8FF),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -541,55 +734,3 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-class _DrowsinessLevelRow extends StatelessWidget {
-  const _DrowsinessLevelRow({
-    required this.label,
-    required this.description,
-    required this.color,
-  });
-
-  final String label;
-  final String description;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            margin: const EdgeInsets.only(top: 6),
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: const Color(0xFFD1F7FF)),
-                children: [
-                  TextSpan(
-                    text: '$label: ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                  TextSpan(text: description),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
