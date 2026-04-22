@@ -45,6 +45,7 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
   DateTime? _lastSampleSent;
   DateTime? _criticalStartedAt;
   bool _contactAlertSent = false;
+  DateTime? _lastEscalationAlertAt;
 
   void resetSessionTracking() {
     _lastAccumulateAt = DateTime.now();
@@ -56,6 +57,7 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
     _lastSampleSent = null;
     _criticalStartedAt = null;
     _contactAlertSent = false;
+    _lastEscalationAlertAt = null;
   }
 
   DrowsinessSessionSummary finishSessionSummary() {
@@ -102,12 +104,20 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
     state = result;
 
     final gotWorse = result.level.index > previousLevel.index;
-    if (gotWorse && result.level.index >= DrowsinessLevel.drowsy.index) {
+    final nowAlert = DateTime.now();
+    final shouldReAlert = _lastEscalationAlertAt == null ||
+        nowAlert.difference(_lastEscalationAlertAt!) >=
+            const Duration(seconds: 8);
+
+    if ((gotWorse || shouldReAlert) &&
+        result.level.index >= DrowsinessLevel.drowsy.index) {
       ref.read(alertProvider.notifier).trigger(severity: result.level.name);
       ref.read(emergencyProvider.notifier).trigger(result.level.name);
+      _lastEscalationAlertAt = nowAlert;
     }
 
     if (result.level == DrowsinessLevel.critical) {
+      ref.read(emergencyProvider.notifier).startLiveEmergencyTracking();
       _criticalStartedAt ??= now;
       final criticalFor = now.difference(_criticalStartedAt!);
       if (!_contactAlertSent && criticalFor >= const Duration(seconds: 15)) {
@@ -119,6 +129,7 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
             );
       }
     } else {
+      ref.read(emergencyProvider.notifier).stopLiveEmergencyTracking();
       _criticalStartedAt = null;
       _contactAlertSent = false;
     }

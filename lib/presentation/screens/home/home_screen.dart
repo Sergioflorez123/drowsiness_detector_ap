@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../data/datasources/remote/driving_remote_datasource.dart';
 import '../../../data/datasources/remote/event_service.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/stats_provider.dart';
 
@@ -45,6 +46,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l = AppLocalizations.of(context)!;
     final locale = ref.watch(localeProvider);
     final localeCtrl = ref.read(localeProvider.notifier);
+    final themeMode = ref.watch(themeProvider);
+    final themeCtrl = ref.read(themeProvider.notifier);
     final isEs = locale.languageCode == 'es';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = Supabase.instance.client.auth.currentUser;
@@ -60,21 +63,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         scrolledUnderElevation: 0,
         title: Text(l.homeTitle),
         actions: [
-          _LangToggle(
-            label: 'ES',
-            selected: locale.languageCode == 'es',
-            onTap: localeCtrl.setSpanish,
+          _LangSegment(
+            isSpanish: isEs,
+            onSpanish: localeCtrl.setSpanish,
+            onEnglish: localeCtrl.setEnglish,
           ),
-          const SizedBox(width: 6),
-          _LangToggle(
-            label: 'EN',
-            selected: locale.languageCode == 'en',
-            onTap: localeCtrl.setEnglish,
-          ),
+          const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: l.settingsTitle,
-            onPressed: () => context.push('/settings'),
+            tooltip: isEs ? 'Modo oscuro' : 'Dark mode',
+            icon: Icon(
+              (themeMode == ThemeMode.dark) ||
+                      (themeMode == ThemeMode.system &&
+                          MediaQuery.of(context).platformBrightness ==
+                              Brightness.dark)
+                  ? Icons.dark_mode_rounded
+                  : Icons.light_mode_rounded,
+            ),
+            onPressed: () {
+              final isCurrentlyDark =
+                  (themeMode == ThemeMode.dark) ||
+                      (themeMode == ThemeMode.system &&
+                          MediaQuery.of(context).platformBrightness ==
+                              Brightness.dark);
+              themeCtrl.toggleTheme(!isCurrentlyDark);
+            },
           ),
         ],
       ),
@@ -429,6 +441,84 @@ class _LangToggle extends StatelessWidget {
           label,
           style: TextStyle(
             color: selected ? const Color(0xFF03293C) : Theme.of(context).hintColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LangSegment extends StatelessWidget {
+  const _LangSegment({
+    required this.isSpanish,
+    required this.onSpanish,
+    required this.onEnglish,
+  });
+
+  final bool isSpanish;
+  final VoidCallback onSpanish;
+  final VoidCallback onEnglish;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 2),
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1EE7FF).withOpacity(0.35)),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF0A1A36)
+            : const Color(0xFFDDF1FF),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _LangPill(
+            label: 'ES',
+            active: isSpanish,
+            onTap: onSpanish,
+          ),
+          _LangPill(
+            label: 'EN',
+            active: !isSpanish,
+            onTap: onEnglish,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LangPill extends StatelessWidget {
+  const _LangPill({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(11),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(11),
+          color: active ? const Color(0xFF1EE7FF) : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? const Color(0xFF03293C) : Theme.of(context).hintColor,
             fontSize: 11,
             fontWeight: FontWeight.w900,
           ),

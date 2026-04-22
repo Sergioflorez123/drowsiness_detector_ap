@@ -165,7 +165,12 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                 infoWindow: InfoWindow(title: l.appTitle),
               ),
             },
-            onMapCreated: (c) => _mapController = c,
+            onMapCreated: (c) {
+              _mapController = c;
+              if (_hasFix) {
+                _maybeMoveCamera(_target, zoom: 16.0, force: true);
+              }
+            },
           ),
           if (!_hasFix && !_permissionDenied)
             Positioned(

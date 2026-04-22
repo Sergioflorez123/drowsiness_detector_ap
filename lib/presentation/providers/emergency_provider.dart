@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/emergency_contact_service.dart';
 import '../../core/services/location_service.dart';
@@ -16,6 +18,8 @@ class EmergencyController extends StateNotifier<bool> {
   final _location = LocationService();
   final _eventService = EventService();
   final _contactService = EmergencyContactService();
+  Timer? _liveTimer;
+  DateTime? _lastSmsAt;
 
   Future<void> trigger(String severity) async {
     if (state) return;
@@ -59,8 +63,44 @@ class EmergencyController extends StateNotifier<bool> {
         phone: contact.phone,
         message: message,
       );
+      _lastSmsAt = DateTime.now();
     } catch (_) {
       // Ignore to avoid app interruption.
     }
+  }
+
+  Future<void> startLiveEmergencyTracking() async {
+    _liveTimer ??= Timer.periodic(const Duration(seconds: 20), (_) async {
+      try {
+        final pos = await _location.getCurrentFast();
+        await _eventService.saveEvent(
+          type: 'critical_live_tracking',
+          lat: pos.latitude,
+          lng: pos.longitude,
+          severity: 'critical',
+        );
+
+        final shouldSms = _lastSmsAt == null ||
+            DateTime.now().difference(_lastSmsAt!) >=
+                const Duration(seconds: 90);
+        if (shouldSms) {
+          await triggerContactAlert(
+            severity: 'critical',
+            reason: 'Actualizacion de ubicacion en tiempo real',
+          );
+        }
+      } catch (_) {}
+    });
+  }
+
+  void stopLiveEmergencyTracking() {
+    _liveTimer?.cancel();
+    _liveTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _liveTimer?.cancel();
+    super.dispose();
   }
 }
