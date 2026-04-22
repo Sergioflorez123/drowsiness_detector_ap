@@ -290,31 +290,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _SideActionButton(
-                  title: l.cardDriveTitle,
-                  icon: Icons.directions_car_filled_rounded,
-                  accent: const Color(0xFF00D2FF),
-                  onTap: () => context.push('/driving'),
+            _CyberContainer(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _BottomQuickButton(
+                        label: 'Inicio',
+                        icon: Icons.remove_red_eye_outlined,
+                        active: true,
+                        onTap: () {},
+                      ),
+                    ),
+                    Expanded(
+                      child: _BottomQuickButton(
+                        label: 'Historial',
+                        icon: Icons.history_rounded,
+                        onTap: () => context.push('/stats'),
+                      ),
+                    ),
+                    Expanded(
+                      child: _BottomQuickButton(
+                        label: 'Mapa',
+                        icon: Icons.map_outlined,
+                        onTap: () => context.push('/map'),
+                      ),
+                    ),
+                    Expanded(
+                      child: _BottomQuickButton(
+                        label: 'Config',
+                        icon: Icons.settings_rounded,
+                        onTap: () => context.push('/settings'),
+                      ),
+                    ),
+                  ],
                 ),
-                _SideActionButton(
-                  title: l.cardMapTitle,
-                  icon: Icons.map_rounded,
-                  accent: const Color(0xFF5CE7FF),
-                  onTap: () => context.push('/map'),
-                ),
-                _SideActionButton(
-                  title: l.cardStatsTitle,
-                  icon: Icons.insights_rounded,
-                  accent: const Color(0xFF7AF6FF),
-                  onTap: () => context.push('/stats'),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 20),
+            _SideActionButton(
+              title: l.cardDriveTitle,
+              icon: Icons.directions_car_filled_rounded,
+              accent: const Color(0xFF00D2FF),
+              onTap: () => context.push('/driving'),
+            ),
+            const SizedBox(height: 10),
             _CyberContainer(
               child: Padding(
                 padding: const EdgeInsets.all(18),
@@ -389,40 +410,77 @@ class _SideActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = (MediaQuery.of(context).size.width - 52) / 2;
-    return SizedBox(
-      width: width,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0B1A39), Color(0xFF0A1632)],
-            ),
-            border: Border.all(color: accent.withOpacity(0.65)),
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0B1A39), Color(0xFF0A1632)],
           ),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: accent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
+          border: Border.all(color: accent.withOpacity(0.65)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: accent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: accent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, size: 18, color: accent),
-            ],
-          ),
+            ),
+            Icon(Icons.chevron_right_rounded, size: 18, color: accent),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomQuickButton extends StatelessWidget {
+  const _BottomQuickButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.active = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? const Color(0xFF1EE7FF) : const Color(0xFF5D7C9A);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
       ),
     );
