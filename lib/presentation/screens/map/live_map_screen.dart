@@ -36,7 +36,9 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     final l = AppLocalizations.of(context)!;
 
     try {
-      final last = await _location.getLastKnown();
+      final last = await _location.getLastKnown().timeout(
+        const Duration(seconds: 2),
+      );
       if (!mounted) return;
       if (last != null) {
         setState(() {
@@ -53,7 +55,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           _target = LatLng(pos.latitude, pos.longitude);
           _hasFix = true;
         });
-        _maybeMoveCamera(_target, zoom: 16.0);
+        _maybeMoveCamera(_target, zoom: 16.4);
       });
 
       // Do not block UI waiting for high-accuracy fix.
@@ -153,7 +155,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _target,
-              zoom: _hasFix ? 15.5 : 4.5,
+              zoom: _hasFix ? 16.0 : 13.5,
             ),
             myLocationEnabled: true,
             myLocationButtonEnabled: true,

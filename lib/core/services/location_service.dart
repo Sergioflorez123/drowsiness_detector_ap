@@ -37,8 +37,8 @@ class LocationService {
   Stream<Position> stream() {
     return Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 8,
+        accuracy: LocationAccuracy.medium,
+        distanceFilter: 3,
       ),
     );
   }

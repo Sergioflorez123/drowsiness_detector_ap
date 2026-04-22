@@ -1,5 +1,11 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:drowsiness_detector_ap/l10n/app_localizations.dart';
@@ -16,6 +22,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  bool _showPassword = false;
+  bool _scanningFace = false;
 
   @override
   void dispose() {
@@ -43,6 +51,167 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           backgroundColor: Colors.redAccent,
         ),
       );
+    }
+  }
+
+  InputImage? _toInputImage(CameraImage image, CameraController controller) {
+    final sensorOrientation = controller.description.sensorOrientation;
+    InputImageRotation rotation = InputImageRotation.rotation0deg;
+    switch (sensorOrientation) {
+      case 90:
+        rotation = InputImageRotation.rotation90deg;
+        break;
+      case 180:
+        rotation = InputImageRotation.rotation180deg;
+        break;
+      case 270:
+        rotation = InputImageRotation.rotation270deg;
+        break;
+      default:
+        rotation = InputImageRotation.rotation0deg;
+    }
+
+    final format = Platform.isAndroid
+        ? InputImageFormat.nv21
+        : InputImageFormat.bgra8888;
+    final buffer = WriteBuffer();
+    for (final p in image.planes) {
+      buffer.putUint8List(p.bytes);
+    }
+    final bytes = buffer.done().buffer.asUint8List();
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: image.planes.first.bytesPerRow,
+      ),
+    );
+  }
+
+  Future<void> _scanFaceAndLogin() async {
+    final l = AppLocalizations.of(context)!;
+    if (emailController.text.trim().isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.errorLogin)),
+      );
+      return;
+    }
+
+    setState(() => _scanningFace = true);
+    CameraController? cam;
+    final detector = FaceDetector(
+      options: FaceDetectorOptions(
+        enableClassification: false,
+        enableTracking: false,
+      ),
+    );
+
+    bool detected = false;
+    bool processing = false;
+    bool dialogOpen = false;
+    try {
+      final cams = await availableCameras();
+      final front = cams.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cams.first,
+      );
+      cam = CameraController(
+        front,
+        ResolutionPreset.low,
+        enableAudio: false,
+        imageFormatGroup:
+            Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
+      );
+      await cam.initialize();
+      final completer = Completer<bool>();
+      await cam.startImageStream((image) async {
+        if (processing || detected || !mounted) return;
+        processing = true;
+        try {
+          final input = _toInputImage(image, cam!);
+          if (input == null) return;
+          final faces = await detector.processImage(input);
+          if (faces.isNotEmpty) {
+            detected = true;
+            if (!completer.isCompleted) completer.complete(true);
+            if (dialogOpen && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          }
+        } catch (_) {
+          // ignore broken frame
+        } finally {
+          processing = false;
+        }
+      });
+
+      dialogOpen = true;
+      Timer(const Duration(seconds: 8), () {
+        if (!completer.isCompleted) completer.complete(false);
+        if (dialogOpen && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          return AlertDialog(
+            title: Text(l.loginTitle),
+            content: SizedBox(
+              width: 260,
+              height: 220,
+              child: cam!.value.isInitialized ? CameraPreview(cam) : const SizedBox(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(l.cancel),
+              ),
+            ],
+          );
+        },
+      );
+      dialogOpen = false;
+
+      final okFace = await completer.future;
+      if (okFace && detected) {
+        await _submit();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              Localizations.localeOf(context).languageCode == 'es'
+                  ? 'No se detecto rostro. Intenta de nuevo.'
+                  : 'No face detected. Try again.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              Localizations.localeOf(context).languageCode == 'es'
+                  ? 'No se pudo abrir camara frontal.'
+                  : 'Could not open front camera.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      try {
+        await cam?.stopImageStream();
+      } catch (_) {}
+      await cam?.dispose();
+      await detector.close();
+      if (mounted) {
+        setState(() => _scanningFace = false);
+      }
     }
   }
 
@@ -142,11 +311,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        onPressed: () {},
-                        child: const Text(
-                          'SCAN TO LOGIN',
-                          style: TextStyle(fontWeight: FontWeight.w900),
-                        ),
+                        onPressed: (loading || _scanningFace) ? null : _scanFaceAndLogin,
+                        child: _scanningFace
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text(
+                                'SCAN TO LOGIN',
+                                style: TextStyle(fontWeight: FontWeight.w900),
+                              ),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -217,7 +392,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: passwordController,
-                        obscureText: true,
+                        obscureText: !_showPassword,
                         style: const TextStyle(color: Color(0xFFD7F8FF)),
                         decoration: InputDecoration(
                           labelText: 'Passkey',
@@ -226,9 +401,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Icons.key_outlined,
                             color: Color(0xFF5AC7DC),
                           ),
-                          suffixIcon: const Icon(
-                            Icons.visibility_outlined,
-                            color: Color(0xFF4F708E),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() => _showPassword = !_showPassword);
+                            },
+                            icon: Icon(
+                              _showPassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: const Color(0xFF4F708E),
+                            ),
                           ),
                           filled: true,
                           fillColor: const Color(0xFF0A1733),

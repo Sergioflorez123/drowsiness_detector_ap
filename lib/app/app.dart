@@ -47,13 +47,13 @@ class MyApp extends ConsumerWidget {
         textTheme: GoogleFonts.plusJakartaSansTextTheme(
           ThemeData.light().textTheme,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        scaffoldBackgroundColor: const Color(0xFFEAF4FB),
         colorScheme: ColorScheme.fromSeed(
           seedColor: _seedLight,
           brightness: Brightness.light,
-          primary: const Color(0xFF4F46E5),
-          secondary: const Color(0xFF06B6D4),
-          tertiary: const Color(0xFFEC4899),
+          primary: const Color(0xFF0B4C80),
+          secondary: const Color(0xFF0A89B5),
+          tertiary: const Color(0xFF00A4D6),
           surface: Colors.white,
         ),
         appBarTheme: const AppBarTheme(
@@ -72,7 +72,7 @@ class MyApp extends ConsumerWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFFF1F5F9),
+          fillColor: const Color(0xFFDCECF8),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
