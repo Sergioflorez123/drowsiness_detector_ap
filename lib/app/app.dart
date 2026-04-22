@@ -136,7 +136,7 @@ class MyApp extends ConsumerWidget {
             ),
             textStyle: const TextStyle(
               fontWeight: FontWeight.w700,
-              fontSize: 50,
+              fontSize: 51,
             ),
           ),
         ),
