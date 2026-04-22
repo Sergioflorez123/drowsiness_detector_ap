@@ -23,6 +23,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   LatLng _target = const LatLng(4.65, -74.05);
   bool _hasFix = false;
   bool _permissionDenied = false;
+  DateTime? _lastCameraMoveAt;
+  LatLng? _lastCameraTarget;
 
   @override
   void initState() {
@@ -45,26 +47,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           CameraUpdate.newLatLngZoom(_target, 15.5),
         );
       }
-
-      final fresh = await _location.getCurrent();
-      if (!mounted) return;
-      setState(() {
-        _target = LatLng(fresh.latitude, fresh.longitude);
-        _hasFix = true;
-      });
-      await _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(_target, 16.2),
-      );
-
       _sub = _location.stream().listen((pos) {
         if (!mounted) return;
         setState(() {
           _target = LatLng(pos.latitude, pos.longitude);
+          _hasFix = true;
         });
-        _mapController?.animateCamera(
-          CameraUpdate.newLatLng(_target),
-        );
+        _maybeMoveCamera(_target, zoom: 16.0);
       });
+
+      // Do not block UI waiting for high-accuracy fix.
+      unawaited(_fetchAccurateFix());
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -74,6 +67,53 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l.mapPermission)),
       );
+    }
+  }
+
+  Future<void> _fetchAccurateFix() async {
+    try {
+      final fresh = await _location.getCurrent().timeout(const Duration(seconds: 6));
+      if (!mounted) return;
+      final next = LatLng(fresh.latitude, fresh.longitude);
+      setState(() {
+        _target = next;
+        _hasFix = true;
+      });
+      _maybeMoveCamera(next, zoom: 16.2, force: true);
+    } catch (_) {
+      // Keep last known or streaming position silently.
+    }
+  }
+
+  void _maybeMoveCamera(
+    LatLng target, {
+    double? zoom,
+    bool force = false,
+  }) {
+    final now = DateTime.now();
+    final lastAt = _lastCameraMoveAt;
+    final lastTarget = _lastCameraTarget;
+
+    if (!force && lastAt != null && now.difference(lastAt) < const Duration(seconds: 2)) {
+      return;
+    }
+
+    if (!force && lastTarget != null) {
+      final movedMeters = Geolocator.distanceBetween(
+        lastTarget.latitude,
+        lastTarget.longitude,
+        target.latitude,
+        target.longitude,
+      );
+      if (movedMeters < 15) return;
+    }
+
+    _lastCameraMoveAt = now;
+    _lastCameraTarget = target;
+    if (zoom != null) {
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
+    } else {
+      _mapController?.animateCamera(CameraUpdate.newLatLng(target));
     }
   }
 

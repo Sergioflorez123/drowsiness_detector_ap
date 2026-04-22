@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../l10n/app_localizations.dart';
 
 import '../../../data/datasources/remote/driving_remote_datasource.dart';
 import '../../../data/datasources/remote/event_service.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/stats_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -16,11 +17,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  String _riskLabel(int score) {
-    if (score >= 90) return 'Bajo';
-    if (score >= 70) return 'Moderado';
-    if (score >= 50) return 'Alto';
-    return 'Crítico';
+  String _riskLabel(int score, bool isEs) {
+    if (score >= 90) return isEs ? 'Vigilante' : 'Vigilant';
+    if (score >= 70) return isEs ? 'Estable' : 'Stable';
+    if (score >= 50) return isEs ? 'Riesgo' : 'Risk';
+    return isEs ? 'Critico' : 'Critical';
   }
 
   Color _riskColor(ColorScheme scheme, int score) {
@@ -42,19 +43,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final locale = ref.watch(localeProvider);
+    final localeCtrl = ref.read(localeProvider.notifier);
+    final isEs = locale.languageCode == 'es';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = Supabase.instance.client.auth.currentUser;
     final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
     final scheme = Theme.of(context).colorScheme;
     final statsAsync = ref.watch(statsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF040B1C),
+      backgroundColor: isDark ? const Color(0xFF040B1C) : const Color(0xFFEFF7FF),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF9EEFFF),
+        foregroundColor: isDark ? const Color(0xFF9EEFFF) : const Color(0xFF00314D),
         scrolledUnderElevation: 0,
         title: Text(l.homeTitle),
         actions: [
+          _LangToggle(
+            label: 'ES',
+            selected: locale.languageCode == 'es',
+            onTap: localeCtrl.setSpanish,
+          ),
+          const SizedBox(width: 6),
+          _LangToggle(
+            label: 'EN',
+            selected: locale.languageCode == 'en',
+            onTap: localeCtrl.setEnglish,
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: l.settingsTitle,
@@ -73,38 +89,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF032B44),
                   ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
             Text(
-              l.homeSubtitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF26D9FF),
+              isEs ? 'Panel de monitoreo neural' : 'Neural monitoring panel',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: isDark ? const Color(0xFF26D9FF) : const Color(0xFF007EA8),
                     fontWeight: FontWeight.w600,
                   ),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 18),
             statsAsync.when(
-              loading: () => const _CyberContainer(
-                child: Padding(
+              loading: () => _CyberContainer(
+                isDark: isDark,
+                child: const Padding(
                   padding: EdgeInsets.all(28),
                   child: Center(child: CircularProgressIndicator()),
                 ),
               ),
               error: (err, stack) => _CyberContainer(
+                isDark: isDark,
                 child: Padding(
                   padding: const EdgeInsets.all(18),
                   child: Text(
-                    'No se pudo cargar el dashboard: $err',
-                    style: const TextStyle(color: Colors.white),
+                    'Dashboard error: $err',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF003A52),
+                    ),
                   ),
                 ),
               ),
               data: (stats) {
                 final riskColor = _riskColor(scheme, stats.safetyScore);
-                final riskLabel = _riskLabel(stats.safetyScore);
+                final riskLabel = _riskLabel(stats.safetyScore, isEs);
                 return _CyberContainer(
+                  isDark: isDark,
                   child: Padding(
                     padding: const EdgeInsets.all(18),
                     child: Column(
@@ -112,18 +133,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.remove_red_eye_rounded,
-                              color: Color(0xFF81EDFF),
+                              color: isDark
+                                  ? const Color(0xFF81EDFF)
+                                  : const Color(0xFF006D93),
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'EYE ALERT',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF81EDFF),
+                                    color: isDark
+                                        ? const Color(0xFF81EDFF)
+                                        : const Color(0xFF006D93),
                                     letterSpacing: 1.1,
                                   ),
                             ),
@@ -136,12 +160,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               decoration: BoxDecoration(
                                 color: riskColor.withOpacity(0.14),
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: riskColor.withOpacity(0.6),
-                                ),
+                                border: Border.all(color: riskColor.withOpacity(0.6)),
                               ),
                               child: Text(
-                                'NEURAL SYNC',
+                                isEs ? 'SINCRONIA' : 'NEURAL SYNC',
                                 style: TextStyle(
                                   color: riskColor.withOpacity(0.95),
                                   fontWeight: FontWeight.w900,
@@ -158,13 +180,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(18),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0A1838), Color(0xFF071126)],
+                            gradient: LinearGradient(
+                              colors: isDark
+                                  ? const [Color(0xFF0A1838), Color(0xFF071126)]
+                                  : const [Color(0xFFE1F2FF), Color(0xFFD4EBFF)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             border: Border.all(
-                              color: const Color(0xFF1FD4FF).withOpacity(0.28),
+                              color: (isDark
+                                      ? const Color(0xFF1FD4FF)
+                                      : const Color(0xFF0095CA))
+                                  .withOpacity(0.28),
                             ),
                           ),
                           child: Column(
@@ -173,12 +200,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'BIOMETRIC STATUS\nDRIVER\nALERTNESS',
+                                      isEs
+                                          ? 'ESTADO BIOMETRICO\nALERTA\nCONDUCTOR'
+                                          : 'BIOMETRIC STATUS\nDRIVER\nALERTNESS',
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium
                                           ?.copyWith(
-                                            color: const Color(0xFF9DD5E3),
+                                            color: isDark
+                                                ? const Color(0xFF9DD5E3)
+                                                : const Color(0xFF005E82),
                                             fontWeight: FontWeight.w800,
                                             height: 1.2,
                                           ),
@@ -191,18 +222,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(12),
-                                      color: const Color(0xFF122B44),
+                                      color: isDark
+                                          ? const Color(0xFF122B44)
+                                          : const Color(0xFFC8E7FB),
                                       border: Border.all(
-                                        color: const Color(
-                                          0xFF1FD4FF,
-                                        ).withOpacity(0.4),
+                                        color: (isDark
+                                                ? const Color(0xFF1FD4FF)
+                                                : const Color(0xFF007EA8))
+                                            .withOpacity(0.4),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'ACTIVE\nSCAN',
+                                    child: Text(
+                                      isEs ? 'ACTIVO\nSCAN' : 'ACTIVE\nSCAN',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        color: Color(0xFF76E9FF),
+                                        color: isDark
+                                            ? const Color(0xFF76E9FF)
+                                            : const Color(0xFF006B8F),
                                         fontSize: 10,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -216,11 +252,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 18),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
-                                  color: const Color(0xFF081731),
+                                  color:
+                                      isDark ? const Color(0xFF081731) : const Color(0xFFCCE9FC),
                                   border: Border.all(
-                                    color: const Color(
-                                      0xFF1FD4FF,
-                                    ).withOpacity(0.22),
+                                    color: (isDark
+                                            ? const Color(0xFF1FD4FF)
+                                            : const Color(0xFF007EA8))
+                                        .withOpacity(0.22),
                                   ),
                                 ),
                                 child: Center(
@@ -230,30 +268,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(12),
-                                      color: const Color(0xFF0A1430),
+                                      color: isDark
+                                          ? const Color(0xFF0A1430)
+                                          : const Color(0xFFEAF7FF),
                                       border: Border.all(
-                                        color: const Color(
-                                          0xFF1FD4FF,
-                                        ).withOpacity(0.52),
+                                        color: (isDark
+                                                ? const Color(0xFF1FD4FF)
+                                                : const Color(0xFF0087B6))
+                                            .withOpacity(0.52),
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF1FD4FF,
-                                          ).withOpacity(0.15),
-                                          blurRadius: 24,
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
                                     ),
                                     child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           '${stats.safetyScore}%',
-                                          style: const TextStyle(
-                                            color: Color(0xFF1EE7FF),
+                                          style: TextStyle(
+                                            color: isDark
+                                                ? const Color(0xFF1EE7FF)
+                                                : const Color(0xFF006A8F),
                                             fontSize: 42,
                                             fontWeight: FontWeight.w900,
                                           ),
@@ -277,22 +310,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         const SizedBox(height: 14),
                         _CyberContainer(
+                          isDark: isDark,
                           child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
+                              children: [
                                 Text(
-                                  'ALERTNESS LEVELS',
+                                  isEs ? 'NIVELES DE ALERTA' : 'ALERTNESS LEVELS',
                                   style: TextStyle(
-                                    color: Color(0xFF8DD5E9),
+                                    color: isDark
+                                        ? const Color(0xFF8DD5E9)
+                                        : const Color(0xFF006E95),
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 1.0,
                                     fontSize: 11,
                                   ),
                                 ),
-                                SizedBox(height: 10),
-                                _DrowsinessGrid(),
+                                const SizedBox(height: 10),
+                                _DrowsinessGrid(isEs: isEs, isDark: isDark),
                               ],
                             ),
                           ),
@@ -302,25 +338,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           children: [
                             Expanded(
                               child: _MetricChip(
-                                label: 'RECENT EVENTS (7D)',
+                                label: isEs
+                                    ? 'EVENTOS RECIENTES (7D)'
+                                    : 'RECENT EVENTS (7D)',
                                 value: '${stats.totalEvents}',
                                 icon: Icons.warning_amber_rounded,
                                 color: const Color(0xFFFFA26B),
+                                isDark: isDark,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: _MetricChip(
-                                label: 'TOTAL SESSIONS',
+                                label: isEs ? 'SESIONES TOTALES' : 'TOTAL SESSIONS',
                                 value: '${stats.totalSessions}',
                                 icon: Icons.route_rounded,
                                 color: const Color(0xFF65F1FF),
+                                isDark: isDark,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        const _ActivityPanel(),
+                        _ActivityPanel(isEs: isEs, isDark: isDark),
                       ],
                     ),
                   ),
@@ -329,45 +369,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Accesos rápidos',
+              isEs ? 'Accesos rapidos' : 'Quick access',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF8BEDFF),
+                    color:
+                        isDark ? const Color(0xFF8BEDFF) : const Color(0xFF006A8F),
                   ),
             ),
             const SizedBox(height: 12),
             _CyberContainer(
+              isDark: isDark,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(
                   children: [
                     Expanded(
                       child: _BottomQuickButton(
-                        label: 'Mapa',
+                        label: isEs ? 'Mapa' : 'Map',
                         icon: Icons.map_outlined,
                         onTap: () => context.push('/map'),
+                        isDark: isDark,
                       ),
                     ),
                     Expanded(
                       child: _BottomQuickButton(
-                        label: 'Iniciar',
+                        label: isEs ? 'Iniciar' : 'Drive',
                         icon: Icons.directions_car_filled_rounded,
                         active: true,
                         onTap: () => context.push('/driving'),
+                        isDark: isDark,
                       ),
                     ),
                     Expanded(
                       child: _BottomQuickButton(
-                        label: 'Historial',
+                        label: isEs ? 'Historial' : 'History',
                         icon: Icons.history_rounded,
                         onTap: () => context.push('/stats'),
+                        isDark: isDark,
                       ),
                     ),
                     Expanded(
                       child: _BottomQuickButton(
-                        label: 'Config',
+                        label: isEs ? 'Ajustes' : 'Settings',
                         icon: Icons.settings_rounded,
                         onTap: () => context.push('/settings'),
+                        isDark: isDark,
                       ),
                     ),
                   ],
@@ -376,6 +422,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 20),
             _CyberContainer(
+              isDark: isDark,
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Row(
@@ -390,7 +437,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Text(
                         l.statsNoDataBody,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFFD3F6FF),
+                              color: isDark
+                                  ? const Color(0xFFD3F6FF)
+                                  : const Color(0xFF0A4A63),
                             ),
                       ),
                     ),
@@ -405,25 +454,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+class _LangToggle extends StatelessWidget {
+  const _LangToggle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF1EE7FF).withOpacity(0.45)),
+          color: selected ? const Color(0xFF1EE7FF) : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? const Color(0xFF03293C) : Theme.of(context).hintColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CyberContainer extends StatelessWidget {
-  const _CyberContainer({required this.child});
+  const _CyberContainer({required this.child, this.isDark = true});
 
   final Widget child;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF091530), Color(0xFF071022)],
+        gradient: LinearGradient(
+          colors: isDark
+              ? const [Color(0xFF091530), Color(0xFF071022)]
+              : const [Color(0xFFE6F4FF), Color(0xFFD7EEFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: const Color(0xFF1FD4FF).withOpacity(0.3)),
+        border: Border.all(
+          color: (isDark ? const Color(0xFF1FD4FF) : const Color(0xFF008DBD))
+              .withOpacity(0.3),
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00CCFF).withOpacity(0.12),
+            color: (isDark ? const Color(0xFF00CCFF) : const Color(0xFF00A4D6))
+                .withOpacity(0.12),
             blurRadius: 24,
             spreadRadius: 1,
           ),
@@ -440,16 +532,20 @@ class _BottomQuickButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.active = false,
+    this.isDark = true,
   });
 
   final String label;
   final IconData icon;
   final VoidCallback onTap;
   final bool active;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? const Color(0xFF1EE7FF) : const Color(0xFF5D7C9A);
+    final color = active
+        ? (isDark ? const Color(0xFF1EE7FF) : const Color(0xFF006A8F))
+        : (isDark ? const Color(0xFF5D7C9A) : const Color(0xFF5F87A1));
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
@@ -476,47 +572,60 @@ class _BottomQuickButton extends StatelessWidget {
 }
 
 class _DrowsinessGrid extends StatelessWidget {
-  const _DrowsinessGrid();
+  const _DrowsinessGrid({required this.isEs, required this.isDark});
+
+  final bool isEs;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: _LevelMini(
-                title: 'NORMAL',
-                subtitle: 'optimal response',
-                color: Color(0xFF1EE7FF),
+                title: isEs ? 'NORMAL' : 'NORMAL',
+                subtitle: isEs ? 'respuesta optima' : 'optimal response',
+                color: const Color(0xFF1EE7FF),
+                isDark: isDark,
               ),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: _LevelMini(
-                title: 'TIRED',
-                subtitle: 'increased blink duration',
-                color: Color(0xFF6C88A5),
+                title: isEs ? 'CANSADO' : 'TIRED',
+                subtitle: isEs
+                    ? 'parpadeo mas prolongado'
+                    : 'increased blink duration',
+                color: const Color(0xFF6C88A5),
+                isDark: isDark,
               ),
             ),
           ],
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: _LevelMini(
-                title: 'DROWSY',
-                subtitle: 'micro-sleeps risk detected',
-                color: Color(0xFFFFA726),
+                title: isEs ? 'SOMNOLIENTO' : 'DROWSY',
+                subtitle: isEs
+                    ? 'riesgo de microsueno detectado'
+                    : 'micro-sleeps risk detected',
+                color: const Color(0xFFFFA726),
+                isDark: isDark,
               ),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: _LevelMini(
-                title: 'CRITICAL',
-                subtitle: 'immediate intervention',
-                color: Color(0xFFFF5252),
+                title: isEs ? 'CRITICO' : 'CRITICAL',
+                subtitle: isEs
+                    ? 'intervencion inmediata'
+                    : 'immediate intervention',
+                color: const Color(0xFFFF5252),
+                isDark: isDark,
               ),
             ),
           ],
@@ -531,11 +640,13 @@ class _LevelMini extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.color,
+    required this.isDark,
   });
 
   final String title;
   final String subtitle;
   final Color color;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -553,8 +664,8 @@ class _LevelMini extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xFFE8F9FF),
+                style: TextStyle(
+                  color: isDark ? const Color(0xFFE8F9FF) : const Color(0xFF003A52),
                   fontWeight: FontWeight.w900,
                   fontSize: 11,
                 ),
@@ -563,8 +674,8 @@ class _LevelMini extends StatelessWidget {
                 subtitle,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF6E92AE),
+                style: TextStyle(
+                  color: isDark ? const Color(0xFF6E92AE) : const Color(0xFF4E7690),
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
                 ),
@@ -578,32 +689,38 @@ class _LevelMini extends StatelessWidget {
 }
 
 class _ActivityPanel extends StatelessWidget {
-  const _ActivityPanel();
+  const _ActivityPanel({required this.isEs, required this.isDark});
+
+  final bool isEs;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return _CyberContainer(
+      isDark: isDark,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
+              children: [
                 Text(
-                  'NEURAL ACTIVITY',
+                  isEs ? 'ACTIVIDAD NEURAL' : 'NEURAL ACTIVITY',
                   style: TextStyle(
-                    color: Color(0xFF8DD5E9),
+                    color:
+                        isDark ? const Color(0xFF8DD5E9) : const Color(0xFF006E95),
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.0,
                     fontSize: 11,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Text(
-                  'OCULAR TRACKING: ON',
+                  isEs ? 'RASTREO OCULAR: ON' : 'OCULAR TRACKING: ON',
                   style: TextStyle(
-                    color: Color(0xFF22DCFF),
+                    color:
+                        isDark ? const Color(0xFF22DCFF) : const Color(0xFF0079A4),
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -615,16 +732,17 @@ class _ActivityPanel extends StatelessWidget {
               height: 64,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: const Color(0xFF07142D),
+                color: isDark ? const Color(0xFF07142D) : const Color(0xFFCBE9FB),
                 border: Border.all(
-                  color: const Color(0xFF1FD4FF).withOpacity(0.2),
+                  color: (isDark ? const Color(0xFF1FD4FF) : const Color(0xFF007EA8))
+                      .withOpacity(0.2),
                 ),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
                   '~ ~ ~ ~ ~ ~ ~ ~',
                   style: TextStyle(
-                    color: Color(0xFF29E4FF),
+                    color: isDark ? const Color(0xFF29E4FF) : const Color(0xFF0078A3),
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
                   ),
@@ -632,9 +750,9 @@ class _ActivityPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+              children: const [
                 _MiniStat(label: 'EYE FRQ', value: '2.4Hz'),
                 _MiniStat(label: 'PUPIL DL', value: '4.2mm'),
                 _MiniStat(label: 'BLINK SPD', value: '120ms'),
@@ -655,13 +773,14 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF6E92AE),
+          style: TextStyle(
+            color: isDark ? const Color(0xFF6E92AE) : const Color(0xFF4E7690),
             fontSize: 9,
             fontWeight: FontWeight.w700,
           ),
@@ -669,8 +788,8 @@ class _MiniStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value,
-          style: const TextStyle(
-            color: Color(0xFF2DE8FF),
+          style: TextStyle(
+            color: isDark ? const Color(0xFF2DE8FF) : const Color(0xFF007AA6),
             fontSize: 13,
             fontWeight: FontWeight.w900,
           ),
@@ -686,12 +805,14 @@ class _MetricChip extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    required this.isDark,
   });
 
   final String label;
   final String value;
   final IconData icon;
   final Color color;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -711,17 +832,17 @@ class _MetricChip extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF003A52),
                   ),
                 ),
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF9BC9D6),
+                    color: isDark ? const Color(0xFF9BC9D6) : const Color(0xFF2C6780),
                     fontWeight: FontWeight.w600,
                   ),
                 ),

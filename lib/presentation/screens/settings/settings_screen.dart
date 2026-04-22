@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:drowsiness_detector_ap/l10n/app_localizations.dart';
 import '../../providers/ai_sensitivity_provider.dart';
-import '../../providers/locale_provider.dart';
 import '../../providers/theme_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -22,7 +21,6 @@ class SettingsScreen extends ConsumerWidget {
     final l = AppLocalizations.of(context)!;
     final themeMode = ref.watch(themeProvider);
     final sensitivity = ref.watch(aiSensitivityProvider);
-    final locale = ref.watch(localeProvider);
     final user = Supabase.instance.client.auth.currentUser;
     final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
     final email = user?.email ?? '';
@@ -91,29 +89,6 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Text(
-              l.settingsLanguage,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ),
-          RadioListTile<String>(
-            title: Text(l.settingsLanguageSpanish),
-            value: 'es',
-            groupValue: locale.languageCode,
-            onChanged: (_) => ref.read(localeProvider.notifier).setSpanish(),
-          ),
-          RadioListTile<String>(
-            title: Text(l.settingsLanguageEnglish),
-            value: 'en',
-            groupValue: locale.languageCode,
-            onChanged: (_) => ref.read(localeProvider.notifier).setEnglish(),
-          ),
-          const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
