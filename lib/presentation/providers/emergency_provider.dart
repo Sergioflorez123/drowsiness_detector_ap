@@ -21,6 +21,7 @@ class EmergencyController extends StateNotifier<bool> {
   final _eventService = EventService();
   final _contactService = EmergencyContactService();
   Timer? _liveTimer;
+  DateTime? _lastWhatsAppAlertAt;
 
   Future<void> trigger(String severity) async {
     if (state) return;
@@ -49,6 +50,14 @@ class EmergencyController extends StateNotifier<bool> {
     required String severity,
     required String reason,
   }) async {
+    final now = DateTime.now();
+    if (_lastWhatsAppAlertAt != null &&
+        now.difference(_lastWhatsAppAlertAt!) < const Duration(minutes: 1)) {
+      // Cooldown activo: no volver a enviar a WhatsApp en menos de 1 minuto
+      _ref.read(whatsAppAlertStatusProvider.notifier).state = 'sent';
+      return;
+    }
+
     final contact = _ref.read(emergencyContactProvider);
     if (!contact.isValid) {
       _ref.read(whatsAppAlertStatusProvider.notifier).state = 'invalid_contact';
@@ -64,6 +73,7 @@ class EmergencyController extends StateNotifier<bool> {
           'ALERTA EYE ALERT: $reason. Nivel: $severity. '
           'El conductor no despierta. Ubicacion en tiempo real: $maps';
 
+      _lastWhatsAppAlertAt = now; // Guardar el timestamp justo antes del envío
       await _contactService.sendWhatsAppAlert(
         phone: contact.phone,
         message: message,
