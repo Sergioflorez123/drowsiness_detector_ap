@@ -136,6 +136,26 @@ class DrivingRemoteDataSource {
     }
   }
 
+  /// Sesiones recientes, más reciente primero (para historial).
+  Future<List<Map<String, dynamic>>> recentSessions({int limit = 30}) async {
+    final uid = _userId;
+    if (uid == null) return [];
+    try {
+      final res = await _client
+          .from('driving_sessions')
+          .select(
+            'id, started_at, ended_at, duration_seconds, max_level, '
+            'sec_normal, sec_tired, sec_drowsy, sec_critical, critical_events',
+          )
+          .eq('user_id', uid)
+          .order('started_at', ascending: false)
+          .limit(limit);
+      return List<Map<String, dynamic>>.from(res);
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<Map<String, dynamic>>> sessionsLastDays(int days) async {
     final uid = _userId;
     if (uid == null) return [];

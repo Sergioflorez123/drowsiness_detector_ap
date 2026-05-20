@@ -30,8 +30,9 @@ class CameraService {
     await controller?.initialize();
   }
 
-  Future<void> startStream(Function(InputImage) onFrame) async {
+  Future<void> startStream(Function(InputImage) onFrame, {bool Function()? isBusy}) async {
     await controller?.startImageStream((image) {
+      if (isBusy != null && isBusy()) return;
       try {
         final inputImage = _convert(image);
         if (inputImage != null) onFrame(inputImage);

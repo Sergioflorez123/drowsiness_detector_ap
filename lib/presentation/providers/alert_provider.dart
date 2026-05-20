@@ -1,17 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:vibration/vibration.dart';
 import 'package:audio_session/audio_session.dart' as session;
 
+import '../../domain/entities/drowsiness_state.dart';
+
 final alertProvider =
     StateNotifierProvider<AlertController, bool>((ref) {
   return AlertController();
 });
 
+/// Vibración y sonido sostenidos mientras el nivel no sea normal (verde).
 class AlertController extends StateNotifier<bool> {
   final _player = AudioPlayer();
   session.AudioSession? _session;
+  DrowsinessLevel? _activeLevel;
+  Timer? _vibrationTimer;
+  bool _isLooping = false;
 
   AlertController() : super(false) {
     _initSession();
@@ -39,37 +47,105 @@ class AlertController extends StateNotifier<bool> {
     ));
   }
 
-  Future<void> trigger({String severity = 'critical'}) async {
-    if (state) return;
+  /// Alinea alertas con el nivel actual: vibración constante hasta volver a normal.
+  Future<void> syncWithLevel(DrowsinessLevel level) async {
+    if (level == DrowsinessLevel.normal) {
+      await stopAlert();
+      return;
+    }
 
-    state = true;
+    final previousLevel = _activeLevel;
+    final escalated = previousLevel == null || level.index > previousLevel.index;
+    _activeLevel = level;
 
-    await _session?.setActive(true);
+    if (level == DrowsinessLevel.critical && !_isLooping) {
+      _isLooping = true;
+      state = true;
+      await _session?.setActive(true);
+      await _playAlarmLoop();
+    } else if (!_isLooping) {
+      if (!state) {
+        state = true;
+        await _session?.setActive(true);
+        await _playAlarmOnce();
+      } else if (escalated) {
+        await _playAlarmOnce();
+      }
+    }
 
+    await _restartVibration(level);
+  }
+
+  Future<void> _playAlarmOnce() async {
     try {
-      await _player.play(AssetSource('alarm.wav'));
+      await _player.stop();
+      await _player.setReleaseMode(ReleaseMode.release);
+      await _player.play(AssetSource('sounds/tone-evacuation.mp3'));
     } catch (_) {
       try {
         await SystemSound.play(SystemSoundType.alert);
       } catch (_) {}
     }
+  }
 
-    final hasVibrator = await Vibration.hasVibrator();
-    if (hasVibrator == true) {
-      if (severity == 'critical') {
-        Vibration.vibrate(pattern: [0, 700, 300, 900], repeat: -1);
-      } else {
-        Vibration.vibrate(pattern: [0, 300, 220, 300], repeat: -1);
-      }
+  Future<void> _playAlarmLoop() async {
+    try {
+      await _player.stop();
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.play(AssetSource('sounds/tone-evacuation.mp3'));
+    } catch (_) {
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
     }
+  }
 
-    await Future.delayed(
-      Duration(seconds: severity == 'critical' ? 5 : 3),
-    );
+  Future<void> _restartVibration(DrowsinessLevel level) async {
+    _vibrationTimer?.cancel();
     await Vibration.cancel();
 
-    await _session?.setActive(false);
+    final hasVibrator = await Vibration.hasVibrator();
+    if (hasVibrator != true) return;
 
+    final pulseMs = switch (level) {
+      DrowsinessLevel.critical => 900,
+      DrowsinessLevel.drowsy => 650,
+      _ => 450,
+    };
+
+    Future<void> pulse() async {
+      if (!state) return;
+      await Vibration.vibrate(duration: pulseMs);
+    }
+
+    await pulse();
+    _vibrationTimer = Timer.periodic(
+      const Duration(milliseconds: 1100),
+      (_) => pulse(),
+    );
+  }
+
+  Future<void> stopAlert() async {
+    if (!state && _activeLevel == null && !_isLooping) return;
+
+    _activeLevel = null;
     state = false;
+    _isLooping = false;
+    _vibrationTimer?.cancel();
+    _vibrationTimer = null;
+    await Vibration.cancel();
+    try {
+      await _player.setReleaseMode(ReleaseMode.release);
+      await _player.stop();
+    } catch (_) {}
+    await _session?.setActive(false);
+  }
+
+  @override
+  void dispose() {
+    _vibrationTimer?.cancel();
+    Vibration.cancel();
+    _player.dispose();
+    super.dispose();
   }
 }

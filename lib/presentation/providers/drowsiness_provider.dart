@@ -1,8 +1,14 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
+import '../../core/services/location_service.dart';
 import '../../core/services/vision_service.dart';
+import '../../data/datasources/remote/activity_log_datasource.dart';
 import '../../data/datasources/remote/driving_remote_datasource.dart';
+import '../../data/datasources/remote/event_service.dart';
 import '../../domain/entities/drowsiness_state.dart';
 import 'ai_sensitivity_provider.dart';
 import 'alert_provider.dart';
@@ -34,7 +40,7 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
         ));
 
   final Ref ref;
-  final VisionService _vision = VisionService();
+  VisionService? _vision;
 
   DateTime _lastAccumulateAt = DateTime.now();
   final Map<DrowsinessLevel, int> _secondsPerLevel = {
@@ -43,11 +49,14 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
   DrowsinessLevel _maxLevel = DrowsinessLevel.normal;
   int _criticalBursts = 0;
   DateTime? _lastSampleSent;
-  DateTime? _criticalStartedAt;
+  DateTime? _lastLocationEventAt;
   bool _contactAlertSent = false;
-  DateTime? _lastEscalationAlertAt;
+  final _location = LocationService();
+  final _eventService = EventService();
 
   void resetSessionTracking() {
+    _vision?.dispose();
+    _vision = VisionService();
     _lastAccumulateAt = DateTime.now();
     for (final l in DrowsinessLevel.values) {
       _secondsPerLevel[l] = 0;
@@ -55,9 +64,8 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
     _maxLevel = DrowsinessLevel.normal;
     _criticalBursts = 0;
     _lastSampleSent = null;
-    _criticalStartedAt = null;
+    _lastLocationEventAt = null;
     _contactAlertSent = false;
-    _lastEscalationAlertAt = null;
   }
 
   DrowsinessSessionSummary finishSessionSummary() {
@@ -76,10 +84,19 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
   }
 
   Future<void> process(InputImage image) async {
+    try {
+      await _processFrame(image);
+    } catch (e, st) {
+      debugPrint('Drowsiness process error: $e\n$st');
+    }
+  }
+
+  Future<void> _processFrame(InputImage image) async {
     final threshold = ref.read(aiSensitivityProvider);
     final previousLevel = state.level;
 
-    final result = await _vision.processImage(
+    _vision ??= VisionService();
+    final result = await _vision!.processImage(
       image,
       eyeOpenThreshold: threshold,
     );
@@ -103,35 +120,38 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
 
     state = result;
 
-    final gotWorse = result.level.index > previousLevel.index;
-    final nowAlert = DateTime.now();
-    final shouldReAlert = _lastEscalationAlertAt == null ||
-        nowAlert.difference(_lastEscalationAlertAt!) >=
-            const Duration(seconds: 8);
+    await ref.read(alertProvider.notifier).syncWithLevel(result.level);
 
-    if ((gotWorse || shouldReAlert) &&
-        result.level.index >= DrowsinessLevel.drowsy.index) {
-      ref.read(alertProvider.notifier).trigger(severity: result.level.name);
+    final gotWorse = result.level.index > previousLevel.index;
+    if (gotWorse && result.level.index >= DrowsinessLevel.drowsy.index) {
       ref.read(emergencyProvider.notifier).trigger(result.level.name);
-      _lastEscalationAlertAt = nowAlert;
+      unawaited(
+        ref.read(activityLogDataSourceProvider).log(
+              activityType: ActivityType.drowsinessAlert,
+              details: {'level': result.level.name},
+            ),
+      );
+    }
+
+    if (result.level.index >= DrowsinessLevel.tired.index) {
+      await _maybeSaveDrowsinessLocation(result.level.name, now);
     }
 
     if (result.level == DrowsinessLevel.critical) {
       ref.read(emergencyProvider.notifier).startLiveEmergencyTracking();
-      _criticalStartedAt ??= now;
-      final criticalFor = now.difference(_criticalStartedAt!);
-      if (!_contactAlertSent && criticalFor >= const Duration(seconds: 15)) {
+      if (!_contactAlertSent) {
         _contactAlertSent = true;
-        await ref.read(emergencyProvider.notifier).triggerContactAlert(
-              severity: 'critical',
-              reason:
-                  'Conductor sin recuperacion tras alerta critica prolongada',
-            );
+        unawaited(
+          ref.read(emergencyProvider.notifier).triggerContactAlert(
+                severity: 'critical',
+                reason: 'Somnolencia critica detectada — conductor no despierta',
+              )
+        );
       }
     } else {
       ref.read(emergencyProvider.notifier).stopLiveEmergencyTracking();
-      _criticalStartedAt = null;
       _contactAlertSent = false;
+      ref.read(whatsAppAlertStatusProvider.notifier).state = null;
     }
 
     final sessionId = ref.read(drivingSessionIdProvider);
@@ -150,7 +170,26 @@ class DrowsinessController extends StateNotifier<DrowsinessState> {
     }
   }
 
+  Future<void> _maybeSaveDrowsinessLocation(String severity, DateTime now) async {
+    final last = _lastLocationEventAt;
+    if (last != null &&
+        now.difference(last) < const Duration(seconds: 18)) {
+      return;
+    }
+    _lastLocationEventAt = now;
+    try {
+      final pos = await _location.getCurrentFast();
+      await _eventService.saveEvent(
+        type: 'drowsiness_location',
+        lat: pos.latitude,
+        lng: pos.longitude,
+        severity: severity,
+      );
+    } catch (_) {}
+  }
+
   void disposeVision() {
-    _vision.dispose();
+    _vision?.dispose();
+    _vision = null;
   }
 }

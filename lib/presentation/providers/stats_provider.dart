@@ -36,7 +36,12 @@ final statsProvider = FutureProvider.autoDispose<DriverStats>((ref) async {
 
   final eventRows = await events.getEventsForLastDays(7);
   final dailyRows = await driving.dailyOpensLastDays(7);
-  final sessionRows = await driving.sessionsLastDays(7);
+  final sessionRows = await driving.recentSessions(limit: 50);
+  final weekAgo = DateTime.now().toUtc().subtract(const Duration(days: 7));
+  final sessionsThisWeek = sessionRows.where((row) {
+    final started = DateTime.tryParse(row['started_at'] as String? ?? '');
+    return started != null && started.isAfter(weekAgo);
+  }).length;
 
   final now = DateTime.now();
   String dayKey(DateTime d) =>
@@ -110,7 +115,7 @@ final statsProvider = FutureProvider.autoDispose<DriverStats>((ref) async {
     weeklyAlertSpots: weeklyAlertSpots,
     dailyOpenSpots: dailyOpenSpots,
     totalEvents: eventRows.length,
-    totalSessions: sessionRows.length,
+    totalSessions: sessionsThisWeek,
     isEmpty: false,
   );
 });

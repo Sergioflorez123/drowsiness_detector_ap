@@ -3,8 +3,10 @@ import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
   Future<bool> _ensurePermission() async {
-    final status = await Permission.locationWhenInUse.request();
-    return status.isGranted;
+    final status = await Permission.locationWhenInUse.status;
+    if (status.isGranted) return true;
+    final requestStatus = await Permission.locationWhenInUse.request();
+    return requestStatus.isGranted;
   }
 
   Future<Position> getCurrent() async {

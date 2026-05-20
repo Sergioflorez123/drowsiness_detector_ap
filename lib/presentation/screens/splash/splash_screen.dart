@@ -138,17 +138,17 @@ class _SplashScreenState extends State<SplashScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 26),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     LinearProgressIndicator(
                       value: 0.66,
                       minHeight: 3,
-                      backgroundColor: Color(0xFF1A2A47),
-                      valueColor: AlwaysStoppedAnimation<Color>(
+                      backgroundColor: const Color(0xFF1A2A47),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
                         Color(0xFF1EE7FF),
                       ),
                     ),
-                    SizedBox(height: 8),
-                    Text(
+                    const SizedBox(height: 8),
+                    const Text(
                       'BIOMETRIC STREAM 66%',
                       style: TextStyle(
                         color: Color(0xFF6EEBFF),

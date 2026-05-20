@@ -66,7 +66,7 @@ class MainLayout extends StatelessWidget {
               onTap: () => _goBranch(3),
               isDark: isDark,
             ),
-          ),
+          ],
         ),
       ),
     );

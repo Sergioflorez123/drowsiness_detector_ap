@@ -77,7 +77,7 @@ class EventService {
     try {
       final response = await client
           .from('events')
-          .select()
+          .select('created_at, severity, latitude, longitude')
           .eq('user_id', userId)
           .gte('created_at', date.toIso8601String())
           .order('created_at', ascending: true);

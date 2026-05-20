@@ -5,22 +5,23 @@ import 'package:google_fonts/google_fonts.dart';
 import '../l10n/app_localizations.dart';
 import '../presentation/providers/locale_provider.dart';
 import '../presentation/providers/theme_provider.dart';
+import 'eye_alert_colors.dart';
 import 'router.dart';
 
 class AppColors {
-  static const primary = Color(0xFF0A1F44); // Azul oscuro
-  static const secondary = Color(0xFF00BFFF); // Celeste brillante
-  static const success = Color(0xFF00C853); // Verde alerta
-  static const warning = Color(0xFFFFD600); // Amarillo advertencia
-  static const danger = Color(0xFFD50000); // Rojo peligro
-  static const background = Color(0xFFF2F4F8); // Gris claro
+  static const primary = EyeAlertColors.primary;
+  static const background = EyeAlertColors.background;
+  static const cardSurface = EyeAlertColors.cardSurface;
+  static const levelNormal = EyeAlertColors.levelNormal;
+  static const levelTired = EyeAlertColors.levelTired;
+  static const levelDrowsy = EyeAlertColors.levelDrowsy;
+  static const levelCritical = EyeAlertColors.levelCritical;
 }
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   static const _seedLight = Color(0xFF6366F1);
-  static const _seedDark = Color(0xFF22D3EE);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -96,33 +97,35 @@ class MyApp extends ConsumerWidget {
         brightness: Brightness.dark,
         textTheme: GoogleFonts.plusJakartaSansTextTheme(
           ThemeData.dark().textTheme,
+        ).apply(
+          bodyColor: EyeAlertColors.textSecondary,
+          displayColor: EyeAlertColors.textPrimary,
         ),
-        scaffoldBackgroundColor: const Color(0xFF0B1220),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _seedDark,
-          brightness: Brightness.dark,
-          primary: const Color(0xFF22D3EE),
-          secondary: const Color(0xFFA78BFA),
-          tertiary: const Color(0xFF34D399),
-          surface: const Color(0xFF111827),
+        scaffoldBackgroundColor: EyeAlertColors.background,
+        colorScheme: const ColorScheme.dark(
+          primary: EyeAlertColors.primary,
+          secondary: EyeAlertColors.levelNormal,
+          surface: EyeAlertColors.cardSurface,
+          onSurface: EyeAlertColors.textPrimary,
+          error: EyeAlertColors.levelCritical,
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          foregroundColor: EyeAlertColors.textPrimary,
         ),
         cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          color: const Color(0xFF111827),
+          color: EyeAlertColors.cardSurface,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF1F2937),
+          fillColor: EyeAlertColors.cardSurface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,

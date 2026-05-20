@@ -1,11 +1,5 @@
-import 'dart:async';
-import 'dart:io';
-
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:drowsiness_detector_ap/l10n/app_localizations.dart';
@@ -23,7 +17,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool _showPassword = false;
-  bool _scanningFace = false;
 
   @override
   void dispose() {
@@ -51,167 +44,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           backgroundColor: Colors.redAccent,
         ),
       );
-    }
-  }
-
-  InputImage? _toInputImage(CameraImage image, CameraController controller) {
-    final sensorOrientation = controller.description.sensorOrientation;
-    InputImageRotation rotation = InputImageRotation.rotation0deg;
-    switch (sensorOrientation) {
-      case 90:
-        rotation = InputImageRotation.rotation90deg;
-        break;
-      case 180:
-        rotation = InputImageRotation.rotation180deg;
-        break;
-      case 270:
-        rotation = InputImageRotation.rotation270deg;
-        break;
-      default:
-        rotation = InputImageRotation.rotation0deg;
-    }
-
-    final format = Platform.isAndroid
-        ? InputImageFormat.nv21
-        : InputImageFormat.bgra8888;
-    final buffer = WriteBuffer();
-    for (final p in image.planes) {
-      buffer.putUint8List(p.bytes);
-    }
-    final bytes = buffer.done().buffer.asUint8List();
-    return InputImage.fromBytes(
-      bytes: bytes,
-      metadata: InputImageMetadata(
-        size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: rotation,
-        format: format,
-        bytesPerRow: image.planes.first.bytesPerRow,
-      ),
-    );
-  }
-
-  Future<void> _scanFaceAndLogin() async {
-    final l = AppLocalizations.of(context)!;
-    if (emailController.text.trim().isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.errorLogin)),
-      );
-      return;
-    }
-
-    setState(() => _scanningFace = true);
-    CameraController? cam;
-    final detector = FaceDetector(
-      options: FaceDetectorOptions(
-        enableClassification: false,
-        enableTracking: false,
-      ),
-    );
-
-    bool detected = false;
-    bool processing = false;
-    bool dialogOpen = false;
-    try {
-      final cams = await availableCameras();
-      final front = cams.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.front,
-        orElse: () => cams.first,
-      );
-      cam = CameraController(
-        front,
-        ResolutionPreset.low,
-        enableAudio: false,
-        imageFormatGroup:
-            Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
-      );
-      await cam.initialize();
-      final completer = Completer<bool>();
-      await cam.startImageStream((image) async {
-        if (processing || detected || !mounted) return;
-        processing = true;
-        try {
-          final input = _toInputImage(image, cam!);
-          if (input == null) return;
-          final faces = await detector.processImage(input);
-          if (faces.isNotEmpty) {
-            detected = true;
-            if (!completer.isCompleted) completer.complete(true);
-            if (dialogOpen && Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
-          }
-        } catch (_) {
-          // ignore broken frame
-        } finally {
-          processing = false;
-        }
-      });
-
-      dialogOpen = true;
-      Timer(const Duration(seconds: 8), () {
-        if (!completer.isCompleted) completer.complete(false);
-        if (dialogOpen && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
-      });
-
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) {
-          return AlertDialog(
-            title: Text(l.loginTitle),
-            content: SizedBox(
-              width: 260,
-              height: 220,
-              child: cam!.value.isInitialized ? CameraPreview(cam) : const SizedBox(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l.cancel),
-              ),
-            ],
-          );
-        },
-      );
-      dialogOpen = false;
-
-      final okFace = await completer.future;
-      if (okFace && detected) {
-        await _submit();
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              Localizations.localeOf(context).languageCode == 'es'
-                  ? 'No se detecto rostro. Intenta de nuevo.'
-                  : 'No face detected. Try again.',
-            ),
-          ),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              Localizations.localeOf(context).languageCode == 'es'
-                  ? 'No se pudo abrir camara frontal.'
-                  : 'Could not open front camera.',
-            ),
-          ),
-        );
-      }
-    } finally {
-      try {
-        await cam?.stopImageStream();
-      } catch (_) {}
-      await cam?.dispose();
-      await detector.close();
-      if (mounted) {
-        setState(() => _scanningFace = false);
-      }
     }
   }
 
@@ -267,108 +99,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0A1A39), Color(0xFF091530)],
-                          ),
-                          border: Border.all(
-                            color: const Color(0xFF1EE7FF).withOpacity(0.26),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF1EE7FF).withOpacity(0.15),
-                              blurRadius: 18,
-                            ),
-                          ],
-                        ),
-                        child: Container(
-                          height: 170,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: const Color(0xFF061126),
-                            border: Border.all(
-                              color: const Color(0xFF2CDFFF).withOpacity(0.35),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.phone_android_rounded,
-                            size: 62,
-                            color: Color(0xFF23DEFF),
-                          ),
+                      const SizedBox(height: 28),
+                      Text(
+                        l.loginTitle,
+                        style: const TextStyle(
+                          color: Color(0xFFD7F8FF),
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1EE7FF),
-                          foregroundColor: const Color(0xFF002030),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                      const SizedBox(height: 6),
+                      Text(
+                        l.appTagline,
+                        style: const TextStyle(
+                          color: Color(0xFF587998),
+                          fontSize: 14,
                         ),
-                        onPressed: (loading || _scanningFace) ? null : _scanFaceAndLogin,
-                        child: _scanningFace
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text(
-                                'SCAN TO LOGIN',
-                                style: TextStyle(fontWeight: FontWeight.w900),
-                              ),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: const Color(0xFF2D4863).withOpacity(0.7),
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'OR PROVIDE CREDENTIALS',
-                              style: TextStyle(
-                                color: Color(0xFF587998),
-                                fontSize: 10,
-                                letterSpacing: 1.0,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: const Color(0xFF2D4863).withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 28),
                       TextFormField(
                         controller: emailController,
                         style: const TextStyle(color: Color(0xFFD7F8FF)),
                         decoration: InputDecoration(
-                          labelText: 'Neural ID',
+                          labelText: l.emailLabel,
                           labelStyle: const TextStyle(color: Color(0xFF72BCD0)),
                           prefixIcon: const Icon(
                             Icons.alternate_email_rounded,
                             color: Color(0xFF5AC7DC),
                           ),
-                          hintText: 'username@neural.net',
-                          hintStyle: const TextStyle(color: Color(0xFF4F708E)),
                           filled: true,
                           fillColor: const Color(0xFF0A1733),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                             borderSide: BorderSide(
-                              color: const Color(0xFF2B4B68).withOpacity(0.55),
+                              color: const Color(0xFF2B4B68).withValues(alpha: 0.55),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
@@ -395,10 +159,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         obscureText: !_showPassword,
                         style: const TextStyle(color: Color(0xFFD7F8FF)),
                         decoration: InputDecoration(
-                          labelText: 'Passkey',
+                          labelText: l.passwordLabel,
                           labelStyle: const TextStyle(color: Color(0xFF72BCD0)),
                           prefixIcon: const Icon(
-                            Icons.key_outlined,
+                            Icons.lock_outline_rounded,
                             color: Color(0xFF5AC7DC),
                           ),
                           suffixIcon: IconButton(
@@ -417,7 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                             borderSide: BorderSide(
-                              color: const Color(0xFF2B4B68).withOpacity(0.55),
+                              color: const Color(0xFF2B4B68).withValues(alpha: 0.55),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
@@ -437,32 +201,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 18),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF1EE7FF),
-                          side: const BorderSide(color: Color(0xFF1EE7FF)),
+                      const SizedBox(height: 22),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF1EE7FF),
+                          foregroundColor: const Color(0xFF002030),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         onPressed: loading ? null : _submit,
                         icon: loading
                             ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF002030),
+                                ),
                               )
-                            : const Icon(Icons.login_rounded, size: 16),
+                            : const Icon(Icons.login_rounded),
                         label: Text(
-                          loading
-                              ? l.splashLoading
-                              : 'AUTHENTICATE VIA NEURAL',
+                          loading ? l.splashLoading : l.enterButton,
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       TextButton(
                         onPressed: () => context.push('/register'),
                         child: Text(

@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../data/datasources/remote/activity_log_datasource.dart';
 import '../../../data/datasources/remote/driving_remote_datasource.dart';
 import '../../../data/datasources/remote/event_service.dart';
+import '../../../app/eye_alert_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';
@@ -19,17 +21,17 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _riskLabel(int score, bool isEs) {
-    if (score >= 90) return isEs ? 'Vigilante' : 'Vigilant';
-    if (score >= 70) return isEs ? 'Estable' : 'Stable';
-    if (score >= 50) return isEs ? 'Riesgo' : 'Risk';
-    return isEs ? 'Critico' : 'Critical';
+    if (score >= 90) return isEs ? 'VIGILANTE' : 'VIGILANT';
+    if (score >= 70) return isEs ? 'ESTABLE' : 'STABLE';
+    if (score >= 50) return isEs ? 'RIESGO' : 'RISK';
+    return isEs ? 'CRITICO' : 'CRITICAL';
   }
 
-  Color _riskColor(ColorScheme scheme, int score) {
-    if (score >= 90) return const Color(0xFF00E5FF);
-    if (score >= 70) return const Color(0xFF00B8D4);
-    if (score >= 50) return Colors.orange;
-    return scheme.error;
+  Color _riskColor(int score, bool isDark) {
+    if (score >= 90) return isDark ? EyeAlertColors.primary : const Color(0xFF0B4C80);
+    if (score >= 70) return isDark ? EyeAlertColors.levelNormal : const Color(0xFF0A89B5);
+    if (score >= 50) return isDark ? EyeAlertColors.levelDrowsy : const Color(0xFFD97706);
+    return isDark ? EyeAlertColors.levelCritical : const Color(0xFFDC2626);
   }
 
   @override
@@ -37,6 +39,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(drivingRemoteDataSourceProvider).logAppOpenedToday();
+      await ref.read(activityLogDataSourceProvider).log(
+            activityType: ActivityType.appOpen,
+          );
       await EventService().syncOfflineEvents();
     });
   }
@@ -52,333 +57,128 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = Supabase.instance.client.auth.currentUser;
     final name = user?.userMetadata?['name'] as String? ?? 'Usuario';
-    final scheme = Theme.of(context).colorScheme;
     final statsAsync = ref.watch(statsProvider);
 
+    final isDarkMode = themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+
+    final useNeuralTheme = isDark;
+
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF040B1C) : const Color(0xFFEFF7FF),
+      backgroundColor:
+          useNeuralTheme ? EyeAlertColors.background : const Color(0xFFEFF7FF),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: isDark ? const Color(0xFF9EEFFF) : const Color(0xFF00314D),
+        centerTitle: false,
+        backgroundColor:
+            useNeuralTheme ? EyeAlertColors.background : const Color(0xFFEFF7FF),
+        elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(l.homeTitle),
+        foregroundColor:
+            useNeuralTheme ? EyeAlertColors.textPrimary : const Color(0xFF00314D),
+        title: Text(
+          l.homeTitle,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: useNeuralTheme
+                ? EyeAlertColors.textPrimary
+                : const Color(0xFF00314D),
+          ),
+        ),
         actions: [
           _LangSegment(
             isSpanish: isEs,
             onSpanish: localeCtrl.setSpanish,
             onEnglish: localeCtrl.setEnglish,
           ),
-          const SizedBox(width: 8),
           IconButton(
             tooltip: isEs ? 'Modo oscuro' : 'Dark mode',
             icon: Icon(
-              (themeMode == ThemeMode.dark) ||
-                      (themeMode == ThemeMode.system &&
-                          MediaQuery.of(context).platformBrightness ==
-                              Brightness.dark)
-                  ? Icons.dark_mode_rounded
-                  : Icons.light_mode_rounded,
+              isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              color: EyeAlertColors.textSecondary,
+              size: 22,
             ),
-            onPressed: () {
-              final isCurrentlyDark =
-                  (themeMode == ThemeMode.dark) ||
-                      (themeMode == ThemeMode.system &&
-                          MediaQuery.of(context).platformBrightness ==
-                              Brightness.dark);
-              themeCtrl.toggleTheme(!isCurrentlyDark);
-            },
+            onPressed: () => themeCtrl.toggleTheme(!isDarkMode),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
             Text(
               l.homeGreeting(name),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                    color: isDark ? Colors.white : const Color(0xFF032B44),
-                  ),
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+                color: useNeuralTheme
+                    ? EyeAlertColors.textPrimary
+                    : const Color(0xFF032B44),
+                letterSpacing: -0.5,
+              ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 6),
             Text(
               isEs ? 'Panel de monitoreo neural' : 'Neural monitoring panel',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: isDark ? const Color(0xFF26D9FF) : const Color(0xFF007EA8),
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: useNeuralTheme
+                    ? EyeAlertColors.primary
+                    : const Color(0xFF007EA8),
+              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
             statsAsync.when(
-              loading: () => _CyberContainer(
-                isDark: isDark,
-                child: const Padding(
-                  padding: EdgeInsets.all(28),
-                  child: Center(child: CircularProgressIndicator()),
+              loading: () => const _SurfaceCard(
+                child: Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: EyeAlertColors.primary,
+                    ),
+                  ),
                 ),
               ),
-              error: (err, stack) => _CyberContainer(
-                isDark: isDark,
+              error: (err, _) => _SurfaceCard(
                 child: Padding(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(20),
                   child: Text(
                     'Dashboard error: $err',
-                    style: TextStyle(
-                      color: isDark ? Colors.white : const Color(0xFF003A52),
-                    ),
+                    style: const TextStyle(color: EyeAlertColors.textPrimary),
                   ),
                 ),
               ),
-              data: (stats) {
-                final riskColor = _riskColor(scheme, stats.safetyScore);
-                final riskLabel = _riskLabel(stats.safetyScore, isEs);
-                return _CyberContainer(
-                  isDark: isDark,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.remove_red_eye_rounded,
-                              color: isDark
-                                  ? const Color(0xFF81EDFF)
-                                  : const Color(0xFF006D93),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'EYE ALERT',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                    color: isDark
-                                        ? const Color(0xFF81EDFF)
-                                        : const Color(0xFF006D93),
-                                    letterSpacing: 1.1,
-                                  ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            gradient: LinearGradient(
-                              colors: isDark
-                                  ? const [Color(0xFF0A1838), Color(0xFF071126)]
-                                  : const [Color(0xFFE1F2FF), Color(0xFFD4EBFF)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            border: Border.all(
-                              color: (isDark
-                                      ? const Color(0xFF1FD4FF)
-                                      : const Color(0xFF0095CA))
-                                  .withOpacity(0.28),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      isEs
-                                          ? 'ESTADO BIOMETRICO\nALERTA\nCONDUCTOR'
-                                          : 'BIOMETRIC STATUS\nDRIVER\nALERTNESS',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            color: isDark
-                                                ? const Color(0xFF9DD5E3)
-                                                : const Color(0xFF005E82),
-                                            fontWeight: FontWeight.w800,
-                                            height: 1.2,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  color:
-                                      isDark ? const Color(0xFF081731) : const Color(0xFFCCE9FC),
-                                  border: Border.all(
-                                    color: (isDark
-                                            ? const Color(0xFF1FD4FF)
-                                            : const Color(0xFF007EA8))
-                                        .withOpacity(0.22),
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Container(
-                                    width: 170,
-                                    height: 170,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      color: isDark
-                                          ? const Color(0xFF0A1430)
-                                          : const Color(0xFFEAF7FF),
-                                      border: Border.all(
-                                        color: (isDark
-                                                ? const Color(0xFF1FD4FF)
-                                                : const Color(0xFF0087B6))
-                                            .withOpacity(0.52),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          '${stats.safetyScore}%',
-                                          style: TextStyle(
-                                            color: isDark
-                                                ? const Color(0xFF1EE7FF)
-                                                : const Color(0xFF006A8F),
-                                            fontSize: 42,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        Text(
-                                          riskLabel.toUpperCase(),
-                                          style: TextStyle(
-                                            color: riskColor,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 1.4,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _CyberContainer(
-                          isDark: isDark,
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isEs ? 'NIVELES DE ALERTA' : 'ALERTNESS LEVELS',
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? const Color(0xFF8DD5E9)
-                                        : const Color(0xFF006E95),
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.0,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                _DrowsinessGrid(isEs: isEs, isDark: isDark),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _MetricChip(
-                                label: isEs
-                                    ? 'EVENTOS RECIENTES (7D)'
-                                    : 'RECENT EVENTS (7D)',
-                                value: '${stats.totalEvents}',
-                                icon: Icons.warning_amber_rounded,
-                                color: const Color(0xFFFFA26B),
-                                isDark: isDark,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _MetricChip(
-                                label: isEs ? 'SESIONES TOTALES' : 'TOTAL SESSIONS',
-                                value: '${stats.totalSessions}',
-                                icon: Icons.route_rounded,
-                                color: const Color(0xFF65F1FF),
-                                isDark: isDark,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+              data: (stats) => _EyeAlertDashboardCard(
+                isEs: isEs,
+                score: stats.safetyScore,
+                riskLabel: _riskLabel(stats.safetyScore, isEs),
+                riskColor: _riskColor(stats.safetyScore, isDark),
+                eventsCount: stats.totalEvents,
+                tripsCount: stats.totalSessions,
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             Text(
               isEs ? 'Accesos rapidos' : 'Quick access',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color:
-                        isDark ? const Color(0xFF8BEDFF) : const Color(0xFF006A8F),
-                  ),
-            ),
-            const SizedBox(height: 12),
-            _CyberContainer(
-              isDark: isDark,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _BottomQuickButton(
-                        label: isEs ? 'Mapa' : 'Map',
-                        icon: Icons.map_outlined,
-                        onTap: () => context.push('/map'),
-                        isDark: isDark,
-                      ),
-                    ),
-                    Expanded(
-                      child: _BottomQuickButton(
-                        label: isEs ? 'Iniciar' : 'Drive',
-                        icon: Icons.directions_car_filled_rounded,
-                        active: true,
-                        onTap: () => context.push('/driving'),
-                        isDark: isDark,
-                      ),
-                    ),
-                    Expanded(
-                      child: _BottomQuickButton(
-                        label: isEs ? 'Historial' : 'History',
-                        icon: Icons.history_rounded,
-                        onTap: () => context.push('/stats'),
-                        isDark: isDark,
-                      ),
-                    ),
-                    Expanded(
-                      child: _BottomQuickButton(
-                        label: isEs ? 'Ajustes' : 'Settings',
-                        icon: Icons.settings_rounded,
-                        onTap: () => context.push('/settings'),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ],
-                ),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: useNeuralTheme
+                    ? EyeAlertColors.textPrimary
+                    : const Color(0xFF00314D),
               ),
+            ),
+            const SizedBox(height: 14),
+            _QuickAccessBar(
+              isEs: isEs,
+              onDrive: () => context.push('/driving'),
+              onHistory: () => context.push('/stats'),
+              onSettings: () => context.push('/settings'),
             ),
           ],
         ),
@@ -387,35 +187,480 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _LangToggle extends StatelessWidget {
-  const _LangToggle({
-    required this.label,
-    required this.selected,
-    required this.onTap,
+/// Tarjeta principal EYE ALERT — igual al mockup.
+class _EyeAlertDashboardCard extends StatelessWidget {
+  const _EyeAlertDashboardCard({
+    required this.isEs,
+    required this.score,
+    required this.riskLabel,
+    required this.riskColor,
+    required this.eventsCount,
+    required this.tripsCount,
   });
 
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  final bool isEs;
+  final int score;
+  final String riskLabel;
+  final Color riskColor;
+  final int eventsCount;
+  final int tripsCount;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF1EE7FF).withOpacity(0.45)),
-          color: selected ? const Color(0xFF1EE7FF) : Colors.transparent,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? EyeAlertColors.primary : const Color(0xFF0B4C80);
+    final secondaryText = isDark ? EyeAlertColors.textSecondary : const Color(0xFF475569);
+
+    return _SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.remove_red_eye_rounded,
+                  color: primaryColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'EYE ALERT',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              isEs
+                  ? 'Estado biométrico del conductor'
+                  : 'Driver biometric status',
+              style: TextStyle(
+                color: secondaryText,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$score%',
+                  style: TextStyle(
+                    fontSize: 56,
+                    fontWeight: FontWeight.w900,
+                    height: 0.95,
+                    color: score >= 90 ? primaryColor : riskColor,
+                    shadows: score >= 90 && isDark ? EyeAlertColors.primaryGlow : null,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    riskLabel,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.1,
+                      color: riskColor,
+                      shadows: score >= 90 && isDark ? EyeAlertColors.primaryGlow : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              isEs ? 'NIVELES DE ALERTA' : 'ALERTNESS LEVELS',
+              style: TextStyle(
+                color: secondaryText,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _AlertLevelsGrid(isEs: isEs),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniStatTile(
+                    icon: Icons.warning_amber_rounded,
+                    iconColor: isDark ? EyeAlertColors.levelDrowsy : const Color(0xFFD97706),
+                    value: '$eventsCount',
+                    label: isEs ? 'Eventos (7 días)' : 'Events (7 days)',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _MiniStatTile(
+                    icon: Icons.route_rounded,
+                    iconColor: primaryColor,
+                    value: '$tripsCount',
+                    label: isEs ? 'Rutas' : 'Trips',
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? const Color(0xFF03293C) : Theme.of(context).hintColor,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+}
+
+class _SurfaceCard extends StatelessWidget {
+  const _SurfaceCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      decoration: isDark
+          ? EyeAlertColors.cardDecoration(radius: 22)
+          : BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: const Color(0xFF0B4C80).withValues(alpha: 0.12),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0B4C80).withValues(alpha: 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+      child: child,
+    );
+  }
+}
+
+class _AlertLevelsGrid extends StatelessWidget {
+  const _AlertLevelsGrid({required this.isEs});
+
+  final bool isEs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _AlertLevelCell(
+                dotColor: EyeAlertColors.levelNormal,
+                title: 'NORMAL',
+                subtitle: isEs ? 'respuesta óptima' : 'optimal response',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _AlertLevelCell(
+                dotColor: EyeAlertColors.levelTired,
+                title: isEs ? 'CANSADO' : 'TIRED',
+                subtitle: isEs
+                    ? 'parpadeo más prolongado'
+                    : 'longer blinking',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _AlertLevelCell(
+                dotColor: EyeAlertColors.levelDrowsy,
+                title: isEs ? 'SOMNOLIENTO' : 'DROWSY',
+                subtitle: isEs
+                    ? 'riesgo de microsueño'
+                    : 'microsleep risk',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _AlertLevelCell(
+                dotColor: EyeAlertColors.levelCritical,
+                title: isEs ? 'CRÍTICO' : 'CRITICAL',
+                subtitle: isEs
+                    ? 'intervención inmediata'
+                    : 'immediate action',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AlertLevelCell extends StatelessWidget {
+  const _AlertLevelCell({
+    required this.dotColor,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final Color dotColor;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: isDark ? EyeAlertColors.textPrimary : const Color(0xFF0F172A),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: isDark ? EyeAlertColors.textSecondary : const Color(0xFF475569),
+                  fontSize: 10,
+                  height: 1.25,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStatTile extends StatelessWidget {
+  const _MiniStatTile({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? EyeAlertColors.background : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? EyeAlertColors.textPrimary : const Color(0xFF0F172A),
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? EyeAlertColors.textSecondary : const Color(0xFF475569),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickAccessBar extends StatelessWidget {
+  const _QuickAccessBar({
+    required this.isEs,
+    required this.onDrive,
+    required this.onHistory,
+    required this.onSettings,
+  });
+
+  final bool isEs;
+  final VoidCallback onDrive;
+  final VoidCallback onHistory;
+  final VoidCallback onSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(
+                child: _QuickAccessItem(
+                  label: isEs ? 'Iniciar' : 'Drive',
+                  icon: Icons.directions_car_filled_rounded,
+                  active: true,
+                  onTap: onDrive,
+                ),
+              ),
+              _QuickDivider(),
+              Expanded(
+                child: _QuickAccessItem(
+                  label: isEs ? 'Historial' : 'History',
+                  icon: Icons.history_rounded,
+                  onTap: onHistory,
+                ),
+              ),
+              _QuickDivider(),
+              Expanded(
+                child: _QuickAccessItem(
+                  label: isEs ? 'Ajustes' : 'Settings',
+                  icon: Icons.settings_rounded,
+                  onTap: onSettings,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: 1,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      color: isDark 
+          ? EyeAlertColors.borderSubtle.withValues(alpha: 0.8)
+          : const Color(0xFFE2E8F0),
+    );
+  }
+}
+
+class _QuickAccessItem extends StatelessWidget {
+  const _QuickAccessItem({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.active = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? EyeAlertColors.primary : const Color(0xFF0B4C80);
+    final color = active 
+        ? primaryColor 
+        : (isDark ? EyeAlertColors.navInactive : const Color(0xFF64748B));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (active)
+                Container(
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: primaryColor.withValues(alpha: 0.35),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withValues(alpha: 0.2),
+                        blurRadius: 14,
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: primaryColor, size: 26),
+                )
+              else
+                SizedBox(
+                  height: 48,
+                  child: Icon(icon, color: color, size: 26),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -436,29 +681,23 @@ class _LangSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? EyeAlertColors.primary : const Color(0xFF0B4C80);
     return Container(
-      margin: const EdgeInsets.only(right: 2),
-      padding: const EdgeInsets.all(2),
+      margin: const EdgeInsets.only(right: 4),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1EE7FF).withOpacity(0.35)),
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF0A1A36)
-            : const Color(0xFFDDF1FF),
+        borderRadius: BorderRadius.circular(20),
+        color: isDark ? EyeAlertColors.background : const Color(0xFFF1F5F9),
+        border: Border.all(
+          color: primaryColor.withValues(alpha: 0.25),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _LangPill(
-            label: 'ES',
-            active: isSpanish,
-            onTap: onSpanish,
-          ),
-          _LangPill(
-            label: 'EN',
-            active: !isSpanish,
-            onTap: onEnglish,
-          ),
+          _LangPill(label: 'ES', active: isSpanish, onTap: onSpanish),
+          _LangPill(label: 'EN', active: !isSpanish, onTap: onEnglish),
         ],
       ),
     );
@@ -478,281 +717,29 @@ class _LangPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(11),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeBg = isDark ? EyeAlertColors.primary : const Color(0xFF0B4C80);
+    final activeText = isDark ? EyeAlertColors.background : Colors.white;
+    final inactiveText = isDark ? EyeAlertColors.textSecondary : const Color(0xFF64748B);
+
+    return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(11),
-          color: active ? const Color(0xFF1EE7FF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          color: active ? activeBg : Colors.transparent,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? const Color(0xFF03293C) : Theme.of(context).hintColor,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: active ? activeText : inactiveText,
           ),
         ),
       ),
     );
   }
 }
-
-class _CyberContainer extends StatelessWidget {
-  const _CyberContainer({required this.child, this.isDark = true});
-
-  final Widget child;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          colors: isDark
-              ? const [Color(0xFF091530), Color(0xFF071022)]
-              : const [Color(0xFFE6F4FF), Color(0xFFD7EEFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(
-          color: (isDark ? const Color(0xFF1FD4FF) : const Color(0xFF008DBD))
-              .withOpacity(0.3),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isDark ? const Color(0xFF00CCFF) : const Color(0xFF00A4D6))
-                .withOpacity(0.12),
-            blurRadius: 24,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-}
-
-class _BottomQuickButton extends StatelessWidget {
-  const _BottomQuickButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.active = false,
-    this.isDark = true,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool active;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = active
-        ? (isDark ? const Color(0xFF1EE7FF) : const Color(0xFF006A8F))
-        : (isDark ? const Color(0xFF5D7C9A) : const Color(0xFF5F87A1));
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DrowsinessGrid extends StatelessWidget {
-  const _DrowsinessGrid({required this.isEs, required this.isDark});
-
-  final bool isEs;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _LevelMini(
-                title: isEs ? 'NORMAL' : 'NORMAL',
-                subtitle: isEs ? 'respuesta optima' : 'optimal response',
-                color: const Color(0xFF1EE7FF),
-                isDark: isDark,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _LevelMini(
-                title: isEs ? 'CANSADO' : 'TIRED',
-                subtitle: isEs
-                    ? 'parpadeo mas prolongado'
-                    : 'increased blink duration',
-                color: const Color(0xFF6C88A5),
-                isDark: isDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _LevelMini(
-                title: isEs ? 'SOMNOLIENTO' : 'DROWSY',
-                subtitle: isEs
-                    ? 'riesgo de microsueno detectado'
-                    : 'micro-sleeps risk detected',
-                color: const Color(0xFFFFA726),
-                isDark: isDark,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _LevelMini(
-                title: isEs ? 'CRITICO' : 'CRITICAL',
-                subtitle: isEs
-                    ? 'intervencion inmediata'
-                    : 'immediate intervention',
-                color: const Color(0xFFFF5252),
-                isDark: isDark,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _LevelMini extends StatelessWidget {
-  const _LevelMini({
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.isDark,
-  });
-
-  final String title;
-  final String subtitle;
-  final Color color;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: isDark ? const Color(0xFFE8F9FF) : const Color(0xFF003A52),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 11,
-                ),
-              ),
-              Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isDark ? const Color(0xFF6E92AE) : const Color(0xFF4E7690),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.isDark,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : const Color(0xFF003A52),
-                  ),
-                ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? const Color(0xFF9BC9D6) : const Color(0xFF2C6780),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-

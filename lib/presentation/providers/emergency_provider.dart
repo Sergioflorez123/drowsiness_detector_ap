@@ -11,6 +11,8 @@ final emergencyProvider =
   return EmergencyController(ref);
 });
 
+final whatsAppAlertStatusProvider = StateProvider<String?>((ref) => null);
+
 class EmergencyController extends StateNotifier<bool> {
   EmergencyController(this._ref) : super(false);
 
@@ -19,7 +21,6 @@ class EmergencyController extends StateNotifier<bool> {
   final _eventService = EventService();
   final _contactService = EmergencyContactService();
   Timer? _liveTimer;
-  DateTime? _lastSmsAt;
 
   Future<void> trigger(String severity) async {
     if (state) return;
@@ -49,23 +50,27 @@ class EmergencyController extends StateNotifier<bool> {
     required String reason,
   }) async {
     final contact = _ref.read(emergencyContactProvider);
-    if (!contact.isValid) return;
+    if (!contact.isValid) {
+      _ref.read(whatsAppAlertStatusProvider.notifier).state = 'invalid_contact';
+      return;
+    }
 
     try {
+      _ref.read(whatsAppAlertStatusProvider.notifier).state = 'sending';
       final pos = await _location.getCurrent();
       final maps =
           'https://maps.google.com/?q=${pos.latitude},${pos.longitude}';
       final message =
           'ALERTA EYE ALERT: $reason. Nivel: $severity. '
-          'Ubicacion del conductor: $maps';
+          'El conductor no despierta. Ubicacion en tiempo real: $maps';
 
-      await _contactService.sendEmergencySms(
+      await _contactService.sendWhatsAppAlert(
         phone: contact.phone,
         message: message,
       );
-      _lastSmsAt = DateTime.now();
+      _ref.read(whatsAppAlertStatusProvider.notifier).state = 'sent';
     } catch (_) {
-      // Ignore to avoid app interruption.
+      _ref.read(whatsAppAlertStatusProvider.notifier).state = 'error';
     }
   }
 
@@ -80,15 +85,7 @@ class EmergencyController extends StateNotifier<bool> {
           severity: 'critical',
         );
 
-        final shouldSms = _lastSmsAt == null ||
-            DateTime.now().difference(_lastSmsAt!) >=
-                const Duration(seconds: 90);
-        if (shouldSms) {
-          await triggerContactAlert(
-            severity: 'critical',
-            reason: 'Actualizacion de ubicacion en tiempo real',
-          );
-        }
+        // Solo persistimos ubicación en backend; WhatsApp se abre al entrar en crítico.
       } catch (_) {}
     });
   }
